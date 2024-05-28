@@ -1,0 +1,12 @@
+name: ChatFilterMC
+version: '${project.version}'
+main: mctest.chatfiltermc.ChatFilterMC
+api-version: '1.20'
+
+commands:
+  filter:
+    description: Toggle filter.
+    usage: /filter
+    aliases: fil
+    permission: filter
+    permission-message: You do not have permission to run this command.
