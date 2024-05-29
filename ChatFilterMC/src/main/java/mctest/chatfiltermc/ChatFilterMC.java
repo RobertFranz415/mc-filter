@@ -12,6 +12,7 @@ public final class ChatFilterMC extends JavaPlugin {
     public void onEnable() {
         // Plugin startup logic
         this.filterConfig = new ConfigUtil(this, "FilterList.yml");
+        filterConfig.save();
 
         Objects.requireNonNull(getCommand("filter")).setExecutor(new Filter(this));
         new ChatFilter(this);
