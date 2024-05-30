@@ -5,8 +5,12 @@ api-version: '1.20'
 
 commands:
   filter:
-    description: Toggle filter.
+    description: Modify the chat filter.
     usage: /filter
     aliases: fil
     permission: filter
     permission-message: You do not have permission to run this command.
+permissions:
+  filter:
+    description: Allows the user to modify the chat filter and receive automated messages when someone triggers filter.
+    default: op

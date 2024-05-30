@@ -1,19 +1,19 @@
 swears:
-  Enabled: false
-  Regex:
+  enabled: false
+  regex:
     - ^.*(f|ƒ|£|🇫|ẝ|ꞙ|ꬵ|🅕)+\s*(u|v|🇺|ʋ|υ|ս|ᴜ|ꞟ|ꭎ|ꭒ|𑣘|ט|𑜆|🅤)?+\s*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(k|\|<|🇰|🅚)+.*$
-  Mode: Censor
-  ReplaceWith: I am lame
+  mode: Censor
+  replaceWith: I am lame
   msgToStaff: '[senderName] tried to swear'
-  Commands:
+  commands:
     - msg [senderName] Don't swear.
 
 slurs:
-  Enabled: true
-  Regex:
+  enabled: true
+  regex:
     - (c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(r|🇷|®️|г|ᴦ|ⲅ|ꭇ|ꭈ|ꮁ|🅡)+\s*(a|4|@|∆|/-\\|/_\\|Д|🇦|🅰️|ɑ|а|🅐)?+\s*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(k|\|<|🇰|🅚)+\s*(e|3|£|🇪|е|ҽ|ꬲ|🅔)?+\s*(r|🇷|®️|г|ᴦ|ⲅ|ꭇ|ꭈ|ꮁ|🅡)+
-  Mode: Censor
-  ReplaceWith: I use slurs as a replacement of actual humor so that if anyone calls me out I can call them triggered instead of having any self-reflection.
+  mode: Censor
+  replaceWith: I use slurs as a replacement of actual humor so that if anyone calls me out I can call them triggered instead of having any self-reflection.
   msgToStaff: '[senderName] tried to use a slur!'
-  Commands:
+  commands:
     - msg [senderName] Stop being an edgy little kid.  You're not funny, you're just pathetic.

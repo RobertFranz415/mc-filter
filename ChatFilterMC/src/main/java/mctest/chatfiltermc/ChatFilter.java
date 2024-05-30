@@ -26,13 +26,13 @@ public class ChatFilter implements Listener {
         this.plugin = plugin;
         this.filterConfig = plugin.getFilterConfig();
 
-        this.swearList = filterConfig.getConfig().getStringList("swears.Regex");
-        this.slurList = filterConfig.getConfig().getStringList("slurs.Regex");
+        this.swearList = filterConfig.getConfig().getStringList("swears.regex");
+        this.slurList = filterConfig.getConfig().getStringList("slurs.regex");
 
     }
 
     public void handleSlurs(UUID uuid) {
-        this.slurCommands = filterConfig.getConfig().getStringList("slurs.Commands");
+        this.slurCommands = filterConfig.getConfig().getStringList("slurs.commands");
         for (int i = 0; i < this.slurCommands.size(); i++) {
             String command = this.slurCommands.get(i);
             if (command.contains("[senderName]")) {
@@ -41,20 +41,37 @@ public class ChatFilter implements Listener {
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
 
         }
-        //TODO this might be a command ^
-        Bukkit.broadcastMessage(ChatColor.RED + Bukkit.getPlayer(uuid).getDisplayName() + " is a loser");
+        //TODO determine if there is a point to having a msg broadcast is worth
+        // if so add it to yaml instead of hard coding it here
+        Bukkit.broadcastMessage(ChatColor.YELLOW + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName() + " is a loser");
+
+        if (this.filterConfig.getConfig().getBoolean("slurs.msgToStaffEnabled")) {
+            String msgToStaff = this.filterConfig.getConfig().getString("slurs.msgToStaff");
+            if (msgToStaff.contains("[senderName]")) {
+                msgToStaff = msgToStaff.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
+            }
+
+            Bukkit.broadcast(ChatColor.RED + msgToStaff, "filter");
+        }
     }
 
-    //TODO Swears might not need separate function... TBD
     public void handleSwears(UUID uuid) {
-        this.swearCommands = filterConfig.getConfig().getStringList("swears.Commands");
+        this.swearCommands = filterConfig.getConfig().getStringList("swears.commands");
         for (int i = 0; i < this.swearCommands.size(); i++) {
             String command = this.swearCommands.get(i);
             if (command.contains("[senderName]")) {
                 command = command.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
             }
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+        }
 
+        if (this.filterConfig.getConfig().getBoolean("swears.msgToStaffEnabled")) {
+            String msgToStaff = this.filterConfig.getConfig().getString("swears.msgToStaff");
+            if (msgToStaff.contains("[senderName]")) {
+                msgToStaff = msgToStaff.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
+            }
+
+            Bukkit.broadcast(ChatColor.RED + msgToStaff, "filter");
         }
     }
 
@@ -70,23 +87,23 @@ public class ChatFilter implements Listener {
         boolean swearFound = false;
 
         for (int i = 0; i < msg.length; i++) {
-            if (this.filterConfig.getConfig().getBoolean("slurs.Enabled")) {
+            if (this.filterConfig.getConfig().getBoolean("slurs.enabled")) {
                 for (String rex : this.slurList) {
                     if (msg[i].matches(rex)) {
                         slurFound = true;
-                        //TODO if statement not necessary, not sure how/if effects efficiency
-                        if (Objects.equals(this.filterConfig.getConfig().getString("slurs.Mode"), "Censor")) {
+                        //TODO if() statement not necessary, not sure how/if effects efficiency
+                        if (Objects.equals(this.filterConfig.getConfig().getString("slurs.mode"), "censor")) {
                             msg[i] = "****";
                         }
                     }
                 }
             }
-            if (this.filterConfig.getConfig().getBoolean("swears.Enabled")) {
+            if (this.filterConfig.getConfig().getBoolean("swears.enabled")) {
                 for (String rex : this.swearList) {
                     if (msg[i].matches(rex)) {
                         swearFound = true;
 
-                        if (Objects.equals(this.filterConfig.getConfig().getString("swears.Mode"), "Censor")) {
+                        if (Objects.equals(this.filterConfig.getConfig().getString("swears.mode"), "censor")) {
                             msg[i] = "****";
                         }
                     }
@@ -103,15 +120,15 @@ public class ChatFilter implements Listener {
                 }
             }.runTask(this.plugin);
 
-            switch (Objects.requireNonNull(this.filterConfig.getConfig().getString("slurs.Mode"))) {
-                case "Censor":
+            switch (Objects.requireNonNull(this.filterConfig.getConfig().getString("slurs.mode"))) {
+                case "censor":
                     String clean = String.join(" ", msg);;
                     event.setMessage(clean);
                     break;
-                case "Replace":
-                    event.setMessage(Objects.requireNonNull(filterConfig.getConfig().getString("slurs.ReplaceWith")));
+                case "replace":
+                    event.setMessage(Objects.requireNonNull(filterConfig.getConfig().getString("slurs.replaceWith")));
                     break;
-                case "Clear":
+                case "clear":
                     event.setCancelled(true);
                     break;
                 default:
@@ -125,15 +142,15 @@ public class ChatFilter implements Listener {
                 }
             }.runTask(this.plugin);
 
-            switch (Objects.requireNonNull(this.filterConfig.getConfig().getString("swears.Mode"))) {
-                case "Censor":
+            switch (Objects.requireNonNull(this.filterConfig.getConfig().getString("swears.mode"))) {
+                case "censor":
                     String clean = String.join(" ", msg);;
                     event.setMessage(clean);
                     break;
-                case "Replace":
-                    event.setMessage(Objects.requireNonNull(filterConfig.getConfig().getString("swears.ReplaceWith")));
+                case "replace":
+                    event.setMessage(Objects.requireNonNull(filterConfig.getConfig().getString("swears.replaceWith")));
                     break;
-                case "Clear":
+                case "clear":
                     event.setCancelled(true);
                     break;
                 default:
