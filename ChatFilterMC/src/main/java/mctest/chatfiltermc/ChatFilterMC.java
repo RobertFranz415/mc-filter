@@ -2,6 +2,7 @@ package mctest.chatfiltermc;
 
 import mctest.chatfiltermc.commands.Filter;
 import mctest.chatfiltermc.util.ConfigUtil;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Objects;
@@ -11,6 +12,7 @@ public final class ChatFilterMC extends JavaPlugin {
     @Override
     public void onEnable() {
         // Plugin startup logic
+        this.saveResource("FilterList.yml", false);
         this.filterConfig = new ConfigUtil(this, "FilterList.yml");
         filterConfig.save();
 

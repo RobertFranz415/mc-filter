@@ -1,19 +1,23 @@
 swears:
-  enabled: false
+  enabled: true
   regex:
     - ^.*(f|ƒ|£|🇫|ẝ|ꞙ|ꬵ|🅕)+\s*(u|v|🇺|ʋ|υ|ս|ᴜ|ꞟ|ꭎ|ꭒ|𑣘|ט|𑜆|🅤)?+\s*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(k|\|<|🇰|🅚)+.*$
-  mode: Censor
-  replaceWith: I am lame
-  msgToStaff: '[senderName] tried to swear'
+  mode: censor
+  replaceWith: I have poor vocabulary
+  msgToStaff: '[senderName] is trying to swear.'
+  msgToStaffEnabled: true
   commands:
     - msg [senderName] Don't swear.
 
 slurs:
-  enabled: true
+  enabled: false
   regex:
-    - (c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(r|🇷|®️|г|ᴦ|ⲅ|ꭇ|ꭈ|ꮁ|🅡)+\s*(a|4|@|∆|/-\\|/_\\|Д|🇦|🅰️|ɑ|а|🅐)?+\s*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(k|\|<|🇰|🅚)+\s*(e|3|£|🇪|е|ҽ|ꬲ|🅔)?+\s*(r|🇷|®️|г|ᴦ|ⲅ|ꭇ|ꭈ|ꮁ|🅡)+
-  mode: Censor
-  replaceWith: I use slurs as a replacement of actual humor so that if anyone calls me out I can call them triggered instead of having any self-reflection.
+    - ^.*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(r|🇷|®️|г|ᴦ|ⲅ|ꭇ|ꭈ|ꮁ|🅡)+\s*(a|4|@|∆|/-\\|/_\\|Д|🇦|🅰️|ɑ|а|🅐)?+\s*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(k|\|<|🇰|🅚)+\s*(e|3|£|🇪|е|ҽ|ꬲ|🅔)?+\s*(r|🇷|®️|г|ᴦ|ⲅ|ꭇ|ꭈ|ꮁ|🅡)+.*$
+  mode: replace
+  replaceWith: I use slurs as a replacement of actual humor so that if anyone calls
+    me out I can call them triggered instead of having any self-reflection.
   msgToStaff: '[senderName] tried to use a slur!'
+  msgToStaffEnabled: true
   commands:
-    - msg [senderName] Stop being an edgy little kid.  You're not funny, you're just pathetic.
+    - msg [senderName] Stop being an edgy little kid.  You're not funny, you're just
+      pathetic.

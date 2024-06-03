@@ -33,17 +33,13 @@ public class ChatFilter implements Listener {
 
     public void handleSlurs(UUID uuid) {
         this.slurCommands = filterConfig.getConfig().getStringList("slurs.commands");
-        for (int i = 0; i < this.slurCommands.size(); i++) {
-            String command = this.slurCommands.get(i);
+        for (String command : this.slurCommands) {
             if (command.contains("[senderName]")) {
                 command = command.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
             }
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
 
         }
-        //TODO determine if there is a point to having a msg broadcast is worth
-        // if so add it to yaml instead of hard coding it here
-        Bukkit.broadcastMessage(ChatColor.YELLOW + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName() + " is a loser");
 
         if (this.filterConfig.getConfig().getBoolean("slurs.msgToStaffEnabled")) {
             String msgToStaff = this.filterConfig.getConfig().getString("slurs.msgToStaff");
@@ -57,8 +53,7 @@ public class ChatFilter implements Listener {
 
     public void handleSwears(UUID uuid) {
         this.swearCommands = filterConfig.getConfig().getStringList("swears.commands");
-        for (int i = 0; i < this.swearCommands.size(); i++) {
-            String command = this.swearCommands.get(i);
+        for (String command : this.swearCommands) {
             if (command.contains("[senderName]")) {
                 command = command.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
             }
