@@ -19,12 +19,13 @@ public class ChatFilter implements Listener {
     private List<String> swearList = new ArrayList<>();
     private List<String> slurList = new ArrayList<>();
     private final ConfigUtil filterConfig;
-    private List<String> slurCommands = new ArrayList<>();
-    private List<String> swearCommands = new ArrayList<>();
+    private final ConfigUtil historyConfig;
+
     public ChatFilter(ChatFilterMC plugin) {
         Bukkit.getPluginManager().registerEvents(this, plugin);
         this.plugin = plugin;
         this.filterConfig = plugin.getFilterConfig();
+        this.historyConfig = plugin.getHistoryConfig();
 
         this.swearList = filterConfig.getConfig().getStringList("swears.regex");
         this.slurList = filterConfig.getConfig().getStringList("slurs.regex");
@@ -32,13 +33,12 @@ public class ChatFilter implements Listener {
     }
 
     public void handleSlurs(UUID uuid) {
-        this.slurCommands = filterConfig.getConfig().getStringList("slurs.commands");
-        for (String command : this.slurCommands) {
+        List<String> slurCommands = filterConfig.getConfig().getStringList("slurs.commands");
+        for (String command : slurCommands) {
             if (command.contains("[senderName]")) {
                 command = command.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
             }
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-
         }
 
         if (this.filterConfig.getConfig().getBoolean("slurs.msgToStaffEnabled")) {
@@ -46,14 +46,32 @@ public class ChatFilter implements Listener {
             if (msgToStaff.contains("[senderName]")) {
                 msgToStaff = msgToStaff.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
             }
-
             Bukkit.broadcast(ChatColor.RED + msgToStaff, "filter");
+        }
+
+        //TODO Possibly add: message, dates, last date, etc
+        // might need to do plain ol if-statement instead of ternary if going to init more than just count
+        if (this.filterConfig.getConfig().getBoolean("swears.history")) {
+            int cnt = (historyConfig.getConfig().getString(uuid + ".slurs.count") == null) ? 1 : historyConfig.getConfig().getInt(uuid + ".slurs.count")+1;
+            this.historyConfig.getConfig().set(uuid + ".slurs.count", cnt);
+            plugin.setHistoryConfig(this.historyConfig);
+
+            int maxStrikes = this.filterConfig.getConfig().getInt("slurs.maxStrikes");
+            if (cnt >= maxStrikes && maxStrikes != -1) {
+                List<String> actions = filterConfig.getConfig().getStringList("slurs.strikeActions");
+                for (String command : actions) {
+                    if (command.contains("[senderName]")) {
+                        command = command.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
+                    }
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                }
+            }
         }
     }
 
     public void handleSwears(UUID uuid) {
-        this.swearCommands = filterConfig.getConfig().getStringList("swears.commands");
-        for (String command : this.swearCommands) {
+        List<String> swearCommands = filterConfig.getConfig().getStringList("swears.commands");
+        for (String command : swearCommands) {
             if (command.contains("[senderName]")) {
                 command = command.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
             }
@@ -68,10 +86,31 @@ public class ChatFilter implements Listener {
 
             Bukkit.broadcast(ChatColor.RED + msgToStaff, "filter");
         }
+
+        if (this.filterConfig.getConfig().getBoolean("swears.history")) {
+            int cnt = (historyConfig.getConfig().getString(uuid + ".swears.count") == null) ? 1 : historyConfig.getConfig().getInt(uuid + ".swears.count")+1;
+            this.historyConfig.getConfig().set(uuid + ".swears.count", cnt);
+            plugin.setHistoryConfig(this.historyConfig);
+
+            int maxStrikes = this.filterConfig.getConfig().getInt("swears.maxStrikes");
+            if (cnt >= maxStrikes && maxStrikes != -1) {
+                List<String> actions = filterConfig.getConfig().getStringList("swears.strikeActions");
+                for (String command : actions) {
+                    if (command.contains("[senderName]")) {
+                        command = command.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
+                    }
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                }
+            }
+        }
+
     }
 
     @EventHandler
     private void onPlayerChatEvent(AsyncPlayerChatEvent event) {
+        if (!this.filterConfig.getConfig().getBoolean("slurs.enabled") && !this.filterConfig.getConfig().getBoolean("swears.enabled")) {
+            return;
+        }
         String message = event.getMessage();
         String[] msg = message.split(" ");
 

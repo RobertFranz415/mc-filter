@@ -9,12 +9,16 @@ import java.util.Objects;
 
 public final class ChatFilterMC extends JavaPlugin {
     private ConfigUtil filterConfig;
+    private ConfigUtil historyConfig;
     @Override
     public void onEnable() {
         // Plugin startup logic
         this.saveResource("FilterList.yml", false);
+        this.saveResource("History.yml", false);
         this.filterConfig = new ConfigUtil(this, "FilterList.yml");
-        filterConfig.save();
+        this.filterConfig.save();
+        this.historyConfig = new ConfigUtil(this, "History.yml");
+        this.historyConfig.save();
 
         Objects.requireNonNull(getCommand("filter")).setExecutor(new Filter(this));
         new ChatFilter(this);
@@ -26,7 +30,16 @@ public final class ChatFilterMC extends JavaPlugin {
 
     public void setFilterConfig(ConfigUtil filterConfig) {
         this.filterConfig = filterConfig;
-        filterConfig.save();
+        this.filterConfig.save();
+    }
+
+    public ConfigUtil getHistoryConfig() {
+        return this.historyConfig;
+    }
+
+    public void setHistoryConfig(ConfigUtil historyConfig) {
+        this.historyConfig = historyConfig;
+        this.historyConfig.save();
     }
 
     @Override
