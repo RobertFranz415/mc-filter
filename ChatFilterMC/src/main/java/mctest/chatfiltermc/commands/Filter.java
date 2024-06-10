@@ -9,15 +9,13 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.event.Listener;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class Filter implements Listener, CommandExecutor {
     private final ChatFilterMC plugin;
     private final ConfigUtil filterConfig;
-    private final ConfigUtil historyConfig;
+    private ConfigUtil historyConfig;
 
     public Filter(ChatFilterMC plugin) {
         Bukkit.getPluginManager().registerEvents(this, plugin);
@@ -27,11 +25,12 @@ public class Filter implements Listener, CommandExecutor {
     }
 
     //TODO
-    // Move regex to end of yaml file sections to clean up when more regex added
+    // Move regex to end of yaml file sections to clean up when more regex added... or make separate files for regex and config stuff
     // Add multiple possible replace messages to be randomly selected
     // Three strike system
     // User history/ past offences saved
     // Clear history
+    // Exceptions list
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -79,6 +78,7 @@ public class Filter implements Listener, CommandExecutor {
             } catch (Exception e) {
                 sender.sendMessage(ChatColor.AQUA + "Please enter a valid username.");
             }
+<<<<<<< Updated upstream
             if (uuid == null) {
                 return true;
             }
@@ -87,6 +87,13 @@ public class Filter implements Listener, CommandExecutor {
             if (!this.historyConfig.getConfig().contains(uuid + ".notes")) {
                 this.historyConfig.getConfig().set(uuid + ".notes", new ArrayList<String>());
             }
+=======
+            this.historyConfig = plugin.getHistoryConfig();
+            if (uuid == null) {
+                return true;
+            }
+            //TODO Change show to list... also change in README
+>>>>>>> Stashed changes
             if (args[1].equalsIgnoreCase("show")) {
                 List<String> notes = new ArrayList<>(this.historyConfig.getConfig().getStringList(uuid + ".notes"));
                 for (int i = 0; i < notes.size(); i++) {
@@ -96,11 +103,12 @@ public class Filter implements Listener, CommandExecutor {
             } else if (args[1].equalsIgnoreCase("add")) {
                 List<String> notes = new ArrayList<>(this.historyConfig.getConfig().getStringList(uuid + ".notes"));
                 StringBuilder note = new StringBuilder();
+                note.append(sender.getName()).append(": ");
                 for (int i = 3; i < args.length; i++) {
                     note.append(args[i]);
                     if (i != args.length - 1) note.append(" ");
                 }
-                notes.add(note.toString());
+                notes.add(this.setCommand(uuid, note.toString()));
                 this.historyConfig.getConfig().set(uuid + ".notes", notes);
                 this.historyConfig.save();
             } else if (args[1].equalsIgnoreCase("remove")) {
@@ -252,7 +260,7 @@ public class Filter implements Listener, CommandExecutor {
                         }
                         break;
                     default:
-                        sender.sendMessage(ChatColor.AQUA + "The possible options are on/off, mode, replace, commands, and staff.");
+                        sender.sendMessage(ChatColor.AQUA + "The possible options are: on/off, mode, replace, commands, and staff.");
                         break;
                 }
             }
@@ -260,5 +268,14 @@ public class Filter implements Listener, CommandExecutor {
             sender.sendMessage(ChatColor.AQUA + "The options for the filter command are: on/off, mode, staff, notes, swears/slurs.");
         }
         return true;
+    }
+    private String setCommand(UUID uuid, String msg) {
+        if (msg.contains("[date]")) {
+            Date now = new Date();
+            SimpleDateFormat format = new SimpleDateFormat("MM/dd/yyyy HH:mm");
+            msg = msg.replace("[date]", "[" + format.format(now) + "]");
+        }
+
+        return msg;
     }
 }

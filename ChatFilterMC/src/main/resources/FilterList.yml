@@ -8,6 +8,7 @@ swears:
   msgToStaffEnabled: true
   commands:
     - msg [senderName] Don't swear.
+    - filter notes add [senderName] [date] [msg]
   history: true
   maxStrikes: 100
   strikeActions:
@@ -25,6 +26,7 @@ slurs:
   commands:
     - msg [senderName] Stop being an edgy little kid.  You're not funny, you're just
       pathetic.
+    - filter notes add [senderName] [date] [msg]
   history: true
   maxStrikes: 100
   strikeActions:

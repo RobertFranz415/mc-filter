@@ -12,6 +12,7 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerChatEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class ChatFilter implements Listener {
@@ -19,7 +20,7 @@ public class ChatFilter implements Listener {
     private List<String> swearList = new ArrayList<>();
     private List<String> slurList = new ArrayList<>();
     private final ConfigUtil filterConfig;
-    private final ConfigUtil historyConfig;
+    private ConfigUtil historyConfig;
 
     public ChatFilter(ChatFilterMC plugin) {
         Bukkit.getPluginManager().registerEvents(this, plugin);
@@ -32,12 +33,15 @@ public class ChatFilter implements Listener {
 
     }
 
-    public void handleSlurs(UUID uuid) {
+    //TODO Make it easy to use a commmand which will store message in notes
+    // Possibly detect option in command with [msg] and replace with message by passing through original maessage to handlers
+    // Clean up/modularize code
+    // The notes are saving with '' now for some reason since creating method for replacing message
+    public void handleSlurs(UUID uuid, String msg) {
+        this.historyConfig = plugin.getHistoryConfig();
         List<String> slurCommands = filterConfig.getConfig().getStringList("slurs.commands");
         for (String command : slurCommands) {
-            if (command.contains("[senderName]")) {
-                command = command.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
-            }
+            command = this.setCommand(command, uuid, msg);
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
         }
 
@@ -70,14 +74,15 @@ public class ChatFilter implements Listener {
                 }
             }
         }
+        //So that the config will update if any commands updater the history
+        plugin.setHistoryConfig(this.historyConfig);
     }
 
-    public void handleSwears(UUID uuid) {
+    public void handleSwears(UUID uuid, String msg) {
+        this.historyConfig = plugin.getHistoryConfig();
         List<String> swearCommands = filterConfig.getConfig().getStringList("swears.commands");
         for (String command : swearCommands) {
-            if (command.contains("[senderName]")) {
-                command = command.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
-            }
+            command = this.setCommand(command, uuid, msg);
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
         }
 
@@ -106,7 +111,24 @@ public class ChatFilter implements Listener {
                 }
             }
         }
+        //So that the config will update if any commands updater the history
+        plugin.setHistoryConfig(this.historyConfig);
+    }
 
+    private String setCommand(String command, UUID uuid, String msg) {
+        if (command.contains("[senderName]")) {
+            command = command.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
+        }
+        if (command.contains("[date]")) {
+            Date now = new Date();
+            SimpleDateFormat format = new SimpleDateFormat("MM/dd/yyyy HH:mm");
+            command = command.replace("[date]", "[" + format.format(now) + "]");
+        }
+        if (command.contains("[msg]")) {
+            command = command.replace("[msg]", ": \"" + msg + "\"");
+        }
+
+        return command;
     }
 
     @EventHandler
@@ -153,7 +175,7 @@ public class ChatFilter implements Listener {
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    handleSlurs(event.getPlayer().getUniqueId());
+                    handleSlurs(event.getPlayer().getUniqueId(), message);
                 }
             }.runTask(this.plugin);
 
@@ -175,7 +197,7 @@ public class ChatFilter implements Listener {
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    handleSwears(event.getPlayer().getUniqueId());
+                    handleSwears(event.getPlayer().getUniqueId(), message);
                 }
             }.runTask(this.plugin);
 
