@@ -1,7 +1,5 @@
 swears:
   enabled: true
-  regex:
-    - ^.*(f|ƒ|£|🇫|ẝ|ꞙ|ꬵ|🅕)+\s*(u|v|🇺|ʋ|υ|ս|ᴜ|ꞟ|ꭎ|ꭒ|𑣘|ט|𑜆|🅤)?+\s*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(k|\|<|🇰|🅚)+.*$
   mode: censor
   replaceWith: I have poor vocabulary
   msgToStaff: '[senderName] is trying to swear.'
@@ -13,11 +11,11 @@ swears:
   maxStrikes: 100
   strikeActions:
     - msg [senderName] That's it buddy!
+  regex:
+    - ^.*(f|ƒ|£|🇫|ẝ|ꞙ|ꬵ|🅕)+\s*(u|v|🇺|ʋ|υ|ս|ᴜ|ꞟ|ꭎ|ꭒ|𑣘|ט|𑜆|🅤)?+\s*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(k|\|<|🇰|🅚)+.*$
 
 slurs:
   enabled: true
-  regex:
-    - ^.*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(r|🇷|®️|г|ᴦ|ⲅ|ꭇ|ꭈ|ꮁ|🅡)+\s*(a|4|@|∆|/-\\|/_\\|Д|🇦|🅰️|ɑ|а|🅐)?+\s*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(k|\|<|🇰|🅚)+\s*(e|3|£|🇪|е|ҽ|ꬲ|🅔)?+\s*(r|🇷|®️|г|ᴦ|ⲅ|ꭇ|ꭈ|ꮁ|🅡)+.*$
   mode: replace
   replaceWith: I use slurs as a replacement of actual humor so that if anyone calls
     me out I can call them triggered instead of having any self-reflection.
@@ -31,3 +29,9 @@ slurs:
   maxStrikes: 100
   strikeActions:
     - msg [senderName] That's it buddy!
+  regex:
+    - ^.*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(r|🇷|®️|г|ᴦ|ⲅ|ꭇ|ꭈ|ꮁ|🅡)+\s*(a|4|@|∆|/-\\|/_\\|Д|🇦|🅰️|ɑ|а|🅐)?+\s*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(k|\|<|🇰|🅚)+\s*(e|3|£|🇪|е|ҽ|ꬲ|🅔)?+\s*(r|🇷|®️|г|ᴦ|ⲅ|ꭇ|ꭈ|ꮁ|🅡)+.*$
+
+spam:
+  enabled: true
+  level: strict

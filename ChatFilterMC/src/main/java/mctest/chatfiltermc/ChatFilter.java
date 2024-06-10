@@ -1,5 +1,6 @@
 package mctest.chatfiltermc;
 
+import jdk.tools.jlink.plugin.Plugin;
 import mctest.chatfiltermc.util.ConfigUtil;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
@@ -11,16 +12,18 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerChatEvent;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitScheduler;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class ChatFilter implements Listener {
     private final ChatFilterMC plugin;
-    private List<String> swearList = new ArrayList<>();
-    private List<String> slurList = new ArrayList<>();
     private final ConfigUtil filterConfig;
     private ConfigUtil historyConfig;
+    private List<String> swearList = new ArrayList<>();
+    private List<String> slurList = new ArrayList<>();
+    private final HashMap<UUID, Integer> spamMap = new HashMap<>();
 
     public ChatFilter(ChatFilterMC plugin) {
         Bukkit.getPluginManager().registerEvents(this, plugin);
@@ -33,10 +36,12 @@ public class ChatFilter implements Listener {
 
     }
 
-    //TODO Make it easy to use a commmand which will store message in notes
+    //TODO
+    // Spam detection
+    // Add exceptions or decide to just use permission/op
     // Possibly detect option in command with [msg] and replace with message by passing through original maessage to handlers
     // Clean up/modularize code
-    // The notes are saving with '' now for some reason since creating method for replacing message
+    // If new entry: make strikes come first in yaml file
     public void handleSlurs(UUID uuid, String msg) {
         this.historyConfig = plugin.getHistoryConfig();
         List<String> slurCommands = filterConfig.getConfig().getStringList("slurs.commands");
@@ -55,8 +60,8 @@ public class ChatFilter implements Listener {
 
         //TODO Possibly add: message, dates, last date, etc
         // might need to do plain ol if-statement instead of ternary if going to init more than just count
-        // spam detection
         // messages separate from notes?
+        // change [date] to [d] or something else shorter
         if (this.filterConfig.getConfig().getBoolean("swears.history")) {
             //TODO maybe use .contains instead of get == null
             int cnt = (historyConfig.getConfig().get(uuid + ".slurs.count") == null) ? 1 : historyConfig.getConfig().getInt(uuid + ".slurs.count")+1;
@@ -133,9 +138,34 @@ public class ChatFilter implements Listener {
 
     @EventHandler
     private void onPlayerChatEvent(AsyncPlayerChatEvent event) {
+        //TODO Uncomment this
+//        if (event.getPlayer().isOp() || event.getPlayer().hasPermission("filter.exception")) return;
         if (!this.filterConfig.getConfig().getBoolean("slurs.enabled") && !this.filterConfig.getConfig().getBoolean("swears.enabled")) {
             return;
         }
+        UUID uuid = event.getPlayer().getUniqueId();
+
+        //TODO determine what is considered spam i.e: normal spam or bots (impossibly quick)
+        // take length of messages into account
+        // put in separate method
+        if (this.filterConfig.getConfig().getBoolean("spam.enabled")) {
+            if (!this.spamMap.containsKey(uuid)) {
+                Bukkit.getLogger().info("First entry into spam amp.");
+                this.spamMap.put(uuid, this.spamMap.getOrDefault(uuid, 0) + 1);
+                Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, () -> {
+                    Bukkit.getLogger().info("Scheduler done.");
+                    this.spamMap.remove(uuid);
+                }, 5 * 10L);
+            } else {
+                Bukkit.getLogger().info("Incrementing spam map.");
+                this.spamMap.put(uuid, this.spamMap.getOrDefault(uuid, 0) + 1);
+                if (this.spamMap.get(uuid) > 3) {
+                    Bukkit.getLogger().info(event.getPlayer().getName() + " is spamming messages!");
+                    //TODO punish spammer: mute, ban, make note etc...
+                }
+            }
+        }
+
         String message = event.getMessage();
         String[] msg = message.split(" ");
 

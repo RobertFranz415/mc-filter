@@ -78,24 +78,23 @@ public class Filter implements Listener, CommandExecutor {
             } catch (Exception e) {
                 sender.sendMessage(ChatColor.AQUA + "Please enter a valid username.");
             }
-<<<<<<< Updated upstream
+
             if (uuid == null) {
                 return true;
             }
+            this.historyConfig = plugin.getHistoryConfig();
             //TODO check if this is needed
             // or if i also have to do this for strikes, etc
             if (!this.historyConfig.getConfig().contains(uuid + ".notes")) {
                 this.historyConfig.getConfig().set(uuid + ".notes", new ArrayList<String>());
             }
-=======
-            this.historyConfig = plugin.getHistoryConfig();
-            if (uuid == null) {
-                return true;
-            }
-            //TODO Change show to list... also change in README
->>>>>>> Stashed changes
-            if (args[1].equalsIgnoreCase("show")) {
+
+            if (args[1].equalsIgnoreCase("list")) {
                 List<String> notes = new ArrayList<>(this.historyConfig.getConfig().getStringList(uuid + ".notes"));
+                if (notes.isEmpty()) {
+                    sender.sendMessage(ChatColor.AQUA + "This player has no notes related to them!");
+                    return true;
+                }
                 for (int i = 0; i < notes.size(); i++) {
                     int num = i + 1;
                     sender.sendMessage(num + ": " + notes.get(i));
@@ -112,18 +111,20 @@ public class Filter implements Listener, CommandExecutor {
                 this.historyConfig.getConfig().set(uuid + ".notes", notes);
                 this.historyConfig.save();
             } else if (args[1].equalsIgnoreCase("remove")) {
-                if (args[3] == "all") {
+                if (args.length == 3) {
+                    sender.sendMessage(ChatColor.AQUA + "Must enter a valid number, all, or history.");
+                    return true;
+                }
+                if (Objects.equals(args[3], "all")) {
                     this.historyConfig.getConfig().set(uuid + ".notes", new ArrayList<String>());
                     this.historyConfig.save();
                     plugin.setHistoryConfig(this.historyConfig);
-                } else if (args[3] == "history") {
+                } else if (Objects.equals(args[3], "history")) {
                     //TODO could remove based off key word
                     List<String> notes = new ArrayList<>(this.historyConfig.getConfig().getStringList(uuid + ".notes"));
-                    for (String note : notes) {
-                        if (note.contains("[Console]")) {
-                            notes.remove(notes);
-                        }
-                    }
+                    
+                    notes.removeIf(note -> note.contains("CONSOLE:"));
+
                     this.historyConfig.getConfig().set(uuid + ".notes", notes);
                     this.historyConfig.save();
                     plugin.setHistoryConfig(this.historyConfig);
@@ -137,35 +138,40 @@ public class Filter implements Listener, CommandExecutor {
                         this.historyConfig.save();
                         plugin.setHistoryConfig(this.historyConfig);
                     } catch (Exception e) {
-                        sender.sendMessage(ChatColor.AQUA + "Please enter the number of the note you want to remove.");
+                        sender.sendMessage(ChatColor.AQUA + "Please enter a valid number of the note you want to remove.");
                     }
                 }
             } else if (args[1].equalsIgnoreCase("strikes")) {
                 //TODO figure out best order of command... currently /filter notes strike [player] clear swears, etc...
                 // possibly add set command to manually set number of strikes
-                if (args[3].equalsIgnoreCase("clear")) {
-                    Bukkit.getLogger().info("Args length: " + args.length);
-                    if (args[4].equalsIgnoreCase("swears")) {
-                        this.historyConfig.getConfig().set(uuid + "swears.count", 0);
-                    } else if (args[4].equalsIgnoreCase("slurs")) {
-                        this.historyConfig.getConfig().set(uuid + ".slurs.count", 0);
-                    } else if (args.length <= 5) {
-                        this.historyConfig.getConfig().set(uuid + ".slurs.count", 0);
-                        this.historyConfig.getConfig().set(uuid + ".swears.count", 0);
+                if (args.length >= 4) {
+                    if (args[3].equalsIgnoreCase("clear")) {
+                        Bukkit.getLogger().info("Args length: " + args.length);
+                        if (args.length == 4) {
+                            Bukkit.getLogger().info("Args length is 4!!!");
+                            this.historyConfig.getConfig().set(uuid + ".slurs.count", 0);
+                            this.historyConfig.getConfig().set(uuid + ".swears.count", 0);
+                        } else if (args[4].equalsIgnoreCase("swears")) {
+                            Bukkit.getLogger().info("CLEAR SWEARS!!!");
+                            this.historyConfig.getConfig().set(uuid + ".swears.count", 0);
+                        } else if (args[4].equalsIgnoreCase("slurs")) {
+                            this.historyConfig.getConfig().set(uuid + ".slurs.count", 0);
+                        } else {
+                            sender.sendMessage(ChatColor.AQUA + "Clear can only be followed by 'slurs' or 'swears'.");
+                        }
+                        this.historyConfig.save();
+                        plugin.setHistoryConfig(this.historyConfig);
                     } else {
-                        sender.sendMessage(ChatColor.AQUA + "Clear can only be followed by 'slurs' or 'swears'.");
+                        sender.sendMessage(ChatColor.AQUA + "To display strike counts simply enter the username of the person.  To clear strikes add clear after.");
                     }
-                    this.historyConfig.save();
-                    plugin.setHistoryConfig(this.historyConfig);
                 } else {
-                    //TODO check if args[4] is null... else send error message
                     int slurCnt = (historyConfig.getConfig().getString(uuid + ".slurs.count") == null) ? 0 : historyConfig.getConfig().getInt(uuid + ".slurs.count");
                     int swearCnt = (historyConfig.getConfig().getString(uuid + ".swears.count") == null) ? 0 : historyConfig.getConfig().getInt(uuid + ".swears.count");
                     sender.sendMessage("Slur strikes: " + slurCnt);
                     sender.sendMessage("Swear strikes: " + swearCnt);
                 }
             } else {
-                sender.sendMessage(ChatColor.AQUA + "The notes commands are: show, add, remove, and strikes.");
+                sender.sendMessage(ChatColor.AQUA + "The notes commands are: list, add, remove, and strikes.");
             }
 
         } else if (args[0].equalsIgnoreCase("swears") || args[0].equalsIgnoreCase("slurs")) {

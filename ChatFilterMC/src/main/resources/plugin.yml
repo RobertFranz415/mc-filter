@@ -14,3 +14,6 @@ permissions:
   filter:
     description: Allows the user to modify the chat filter and receive automated messages when someone triggers filter.
     default: op
+  filter.exception:
+    description: Makes the user an exception to the filter.
+    default: op
