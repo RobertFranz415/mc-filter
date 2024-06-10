@@ -51,8 +51,11 @@ public class ChatFilter implements Listener {
 
         //TODO Possibly add: message, dates, last date, etc
         // might need to do plain ol if-statement instead of ternary if going to init more than just count
+        // spam detection
+        // messages separate from notes?
         if (this.filterConfig.getConfig().getBoolean("swears.history")) {
-            int cnt = (historyConfig.getConfig().getString(uuid + ".slurs.count") == null) ? 1 : historyConfig.getConfig().getInt(uuid + ".slurs.count")+1;
+            //TODO maybe use .contains instead of get == null
+            int cnt = (historyConfig.getConfig().get(uuid + ".slurs.count") == null) ? 1 : historyConfig.getConfig().getInt(uuid + ".slurs.count")+1;
             this.historyConfig.getConfig().set(uuid + ".slurs.count", cnt);
             plugin.setHistoryConfig(this.historyConfig);
 
