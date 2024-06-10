@@ -18,7 +18,7 @@ Admins can easily save notes on players in order to reference later.  Using the 
 
 /filter mode censor/replace/clear
 
-/filter notes show [username]
+/filter notes list [username]
 
 /filter notes add [username] [note]
 
