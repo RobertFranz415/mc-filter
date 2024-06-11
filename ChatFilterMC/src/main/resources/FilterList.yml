@@ -1,3 +1,20 @@
+# Automatically replaced shortcuts:
+# [senderName] -> Message sender's username
+# [date] -> Current date in "MM/dd/yyyy HH:mm" format
+# [msg] -> The message which triggered filter (only usable in automated commands)
+# Example: [senderName] [date] [msg] -> Player1 [01//01/2024]: "Message with bad word"
+
+# Modes:
+# censor: replaces filtered words with **** but keeps the rest of the comment
+# replace: replaces filtered message with 'replaceWith'
+# clear: message is not sent at all
+
+# msgToStaff: sends this message to all online admins if enabled
+# commands: commands which run after a filtered word was detected
+# history saves filtered messages to notes
+# strikeActions: commands automatically run when maxStrikes is reached by a player
+# to disable max strike: set to -1
+
 swears:
   enabled: true
   mode: censor
@@ -32,6 +49,26 @@ slurs:
   regex:
     - ^.*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(r|🇷|®️|г|ᴦ|ⲅ|ꭇ|ꭈ|ꮁ|🅡)+\s*(a|4|@|∆|/-\\|/_\\|Д|🇦|🅰️|ɑ|а|🅐)?+\s*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(k|\|<|🇰|🅚)+\s*(e|3|£|🇪|е|ҽ|ꬲ|🅔)?+\s*(r|🇷|®️|г|ᴦ|ⲅ|ꭇ|ꭈ|ꮁ|🅡)+.*$
 
+# Triggers spam filter if person enters 'numberToTrigger' messages in 'timeAllotted'
 spam:
   enabled: true
-  level: strict
+  numberToTrigger: 3
+  timeAllotted: 5
+
+# Modes: normal (off), chill, slow, ice
+# Time is in seconds for time in between messages
+chatSpeed:
+  mode: normal
+  chill:
+    time: 3
+  slow:
+    time: 10
+  ice:
+    time: 30
+
+# Detects consecutive messages entered faster than humanly possible
+# Time is in milliseconds
+# I personally could not get below 400 in testing
+bot:
+  enabled: true
+  time: 400

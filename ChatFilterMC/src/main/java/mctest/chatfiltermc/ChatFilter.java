@@ -14,6 +14,7 @@ import org.bukkit.event.player.PlayerChatEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitScheduler;
 
+import javax.print.attribute.standard.Severity;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -24,6 +25,7 @@ public class ChatFilter implements Listener {
     private List<String> swearList = new ArrayList<>();
     private List<String> slurList = new ArrayList<>();
     private final HashMap<UUID, Integer> spamMap = new HashMap<>();
+    private final HashMap<UUID, Date> lastMsgMap = new HashMap<>();
 
     public ChatFilter(ChatFilterMC plugin) {
         Bukkit.getPluginManager().registerEvents(this, plugin);
@@ -37,7 +39,6 @@ public class ChatFilter implements Listener {
     }
 
     //TODO
-    // Spam detection
     // Add exceptions or decide to just use permission/op
     // Possibly detect option in command with [msg] and replace with message by passing through original maessage to handlers
     // Clean up/modularize code
@@ -61,10 +62,8 @@ public class ChatFilter implements Listener {
         //TODO Possibly add: message, dates, last date, etc
         // might need to do plain ol if-statement instead of ternary if going to init more than just count
         // messages separate from notes?
-        // change [date] to [d] or something else shorter
         if (this.filterConfig.getConfig().getBoolean("swears.history")) {
-            //TODO maybe use .contains instead of get == null
-            int cnt = (historyConfig.getConfig().get(uuid + ".slurs.count") == null) ? 1 : historyConfig.getConfig().getInt(uuid + ".slurs.count")+1;
+            int cnt = !historyConfig.getConfig().contains(uuid + ".slurs.count") ? 1 : historyConfig.getConfig().getInt(uuid + ".slurs.count")+1;
             this.historyConfig.getConfig().set(uuid + ".slurs.count", cnt);
             plugin.setHistoryConfig(this.historyConfig);
 
@@ -79,18 +78,21 @@ public class ChatFilter implements Listener {
                 }
             }
         }
-        //So that the config will update if any commands updater the history
+        //So that the config will update if any commands update the history
         plugin.setHistoryConfig(this.historyConfig);
     }
 
     public void handleSwears(UUID uuid, String msg) {
         this.historyConfig = plugin.getHistoryConfig();
+
+        // Commands
         List<String> swearCommands = filterConfig.getConfig().getStringList("swears.commands");
         for (String command : swearCommands) {
             command = this.setCommand(command, uuid, msg);
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
         }
 
+        // Message to staff
         if (this.filterConfig.getConfig().getBoolean("swears.msgToStaffEnabled")) {
             String msgToStaff = this.filterConfig.getConfig().getString("swears.msgToStaff");
             if (msgToStaff.contains("[senderName]")) {
@@ -100,8 +102,9 @@ public class ChatFilter implements Listener {
             Bukkit.broadcast(ChatColor.RED + msgToStaff, "filter");
         }
 
+        // History
         if (this.filterConfig.getConfig().getBoolean("swears.history")) {
-            int cnt = (historyConfig.getConfig().getString(uuid + ".swears.count") == null) ? 1 : historyConfig.getConfig().getInt(uuid + ".swears.count")+1;
+            int cnt = !historyConfig.getConfig().contains(uuid + ".swears.count") ? 1 : historyConfig.getConfig().getInt(uuid + ".swears.count")+1;
             this.historyConfig.getConfig().set(uuid + ".swears.count", cnt);
             plugin.setHistoryConfig(this.historyConfig);
 
@@ -116,7 +119,7 @@ public class ChatFilter implements Listener {
                 }
             }
         }
-        //So that the config will update if any commands updater the history
+        //So that the config will update if any commands update the history
         plugin.setHistoryConfig(this.historyConfig);
     }
 
@@ -137,6 +140,70 @@ public class ChatFilter implements Listener {
     }
 
     @EventHandler
+    private void onChatSpamEvent(AsyncPlayerChatEvent event) {
+        //TODO Uncomment this
+//        if (event.getPlayer().isOp() || event.getPlayer().hasPermission("filter.exception")) return;
+        UUID uuid = event.getPlayer().getUniqueId();
+
+        //TODO
+        // take length of messages into account (?)
+        if (this.filterConfig.getConfig().getBoolean("spam.enabled")) {
+
+            if (this.filterConfig.getConfig().getBoolean("bot.enabled") || !Objects.equals(this.filterConfig.getConfig().getString("chatSpeed.mode"), "normal")) {
+                if (!this.lastMsgMap.containsKey(uuid)) {
+                    this.lastMsgMap.put(uuid, new Date());
+                } else {
+                    Date now = new Date();
+                    long dif = now.getTime() - this.lastMsgMap.get(uuid).getTime();
+
+                    if (this.filterConfig.getConfig().getBoolean("bot.enabled")) {
+                        // Time is in milliseconds. 400 seemed too fast for a human in my testing.  I only got below 500 once or twice
+                        if (dif < this.filterConfig.getConfig().getLong("bot.time")) {
+                            new BukkitRunnable() {
+                                @Override
+                                public void run() {
+                                    //Bukkit.getLogger().warning(ChatColor.RED + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + " is likely botting.");
+                                    Bukkit.broadcast(ChatColor.RED + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + " is typing suspiciously fast...", "filter");
+                                    event.setCancelled(true);
+                                }
+                            }.runTask(this.plugin);
+                            //TODO Punish: ban, mute, etc...
+                            return;
+                        }
+                    }
+
+                    if (!Objects.equals(this.filterConfig.getConfig().getString("chatSpeed.mode"), "normal")) {
+                        String mode = this.filterConfig.getConfig().getString("chatSpeed.mode");
+                        long limit = this.filterConfig.getConfig().getLong("chatSpeed." + mode + ".time") * 1000;
+                        if (dif < limit) {
+                            long left = (limit - dif) / 1000;
+                            Bukkit.getPlayer(uuid).sendMessage(ChatColor.RED + "Must wait " + left + " more seconds to comment again.");
+                            event.setCancelled(true);
+                            return;
+                        }
+                    }
+
+                    if (!this.spamMap.containsKey(uuid)) {
+                        this.spamMap.put(uuid, this.spamMap.getOrDefault(uuid, 0) + 1);
+                        Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, () -> {
+                            this.spamMap.remove(uuid);
+                        }, this.filterConfig.getConfig().getInt("spam.timeAllotted") * 20L);
+                    } else {
+                        this.spamMap.put(uuid, this.spamMap.getOrDefault(uuid, 0) + 1);
+                        if (this.spamMap.get(uuid) > this.filterConfig.getConfig().getInt("spam.numberToTrigger")) {
+                            //Bukkit.getLogger().info(event.getPlayer().getName() + " is spamming messages!");
+                            Bukkit.broadcast(ChatColor.RED + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + " is spamming messages.", "filter");
+                            //TODO punish spammer: mute, ban, make note etc...
+                        }
+                    }
+
+                    this.lastMsgMap.put(uuid, now);
+                }
+            }
+        }
+    }
+
+    @EventHandler
     private void onPlayerChatEvent(AsyncPlayerChatEvent event) {
         //TODO Uncomment this
 //        if (event.getPlayer().isOp() || event.getPlayer().hasPermission("filter.exception")) return;
@@ -144,27 +211,6 @@ public class ChatFilter implements Listener {
             return;
         }
         UUID uuid = event.getPlayer().getUniqueId();
-
-        //TODO determine what is considered spam i.e: normal spam or bots (impossibly quick)
-        // take length of messages into account
-        // put in separate method
-        if (this.filterConfig.getConfig().getBoolean("spam.enabled")) {
-            if (!this.spamMap.containsKey(uuid)) {
-                Bukkit.getLogger().info("First entry into spam amp.");
-                this.spamMap.put(uuid, this.spamMap.getOrDefault(uuid, 0) + 1);
-                Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, () -> {
-                    Bukkit.getLogger().info("Scheduler done.");
-                    this.spamMap.remove(uuid);
-                }, 5 * 10L);
-            } else {
-                Bukkit.getLogger().info("Incrementing spam map.");
-                this.spamMap.put(uuid, this.spamMap.getOrDefault(uuid, 0) + 1);
-                if (this.spamMap.get(uuid) > 3) {
-                    Bukkit.getLogger().info(event.getPlayer().getName() + " is spamming messages!");
-                    //TODO punish spammer: mute, ban, make note etc...
-                }
-            }
-        }
 
         String message = event.getMessage();
         String[] msg = message.split(" ");
@@ -205,7 +251,7 @@ public class ChatFilter implements Listener {
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    handleSlurs(event.getPlayer().getUniqueId(), message);
+                    handleSlurs(uuid, message);
                 }
             }.runTask(this.plugin);
 
@@ -227,7 +273,7 @@ public class ChatFilter implements Listener {
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    handleSwears(event.getPlayer().getUniqueId(), message);
+                    handleSwears(uuid, message);
                 }
             }.runTask(this.plugin);
 

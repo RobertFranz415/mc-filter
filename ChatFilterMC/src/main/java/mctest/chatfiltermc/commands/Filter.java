@@ -31,6 +31,7 @@ public class Filter implements Listener, CommandExecutor {
     // User history/ past offences saved
     // Clear history
     // Exceptions list
+    // Timeout individual player
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -174,6 +175,32 @@ public class Filter implements Listener, CommandExecutor {
                 sender.sendMessage(ChatColor.AQUA + "The notes commands are: list, add, remove, and strikes.");
             }
 
+        } else if (args[0].equalsIgnoreCase("spam")) {
+            if (Objects.equals(args[1], "on") || Objects.equals(args[1], "off")) {
+                Boolean state = args[1].equals("on");
+                this.filterConfig.getConfig().set("spam.enabled", state);
+                this.filterConfig.save();
+                plugin.setFilterConfig(filterConfig);
+            } else {
+                sender.sendMessage(ChatColor.AQUA + "The options are: on and off.");
+            }
+        } else if (args[0].equalsIgnoreCase("bot")) {
+            if (Objects.equals(args[1], "on") || Objects.equals(args[1], "off")) {
+                Boolean state = args[1].equals("on");
+                this.filterConfig.getConfig().set("bot.enabled", state);
+                this.filterConfig.save();
+                plugin.setFilterConfig(filterConfig);
+            } else {
+                sender.sendMessage(ChatColor.AQUA + "The options are: on and off.");
+            }
+        } else if (args[0].equalsIgnoreCase("speed")) {
+            if (Objects.equals(args[1], "normal") || Objects.equals(args[1], "chill") || Objects.equals(args[1], "slow") || Objects.equals(args[1], "ice")) {
+                this.filterConfig.getConfig().set("chatSpeed.mode", args[1]);
+                this.filterConfig.save();
+                plugin.setFilterConfig(filterConfig);
+            } else {
+                sender.sendMessage(ChatColor.AQUA + "The options are: normal, chill, slow, ice..");
+            }
         } else if (args[0].equalsIgnoreCase("swears") || args[0].equalsIgnoreCase("slurs")) {
             if (Objects.equals(args[1], "on") || Objects.equals(args[1], "off")) {
                 Boolean state = args[1].equals("on");
@@ -271,7 +298,7 @@ public class Filter implements Listener, CommandExecutor {
                 }
             }
         } else {
-            sender.sendMessage(ChatColor.AQUA + "The options for the filter command are: on/off, mode, staff, notes, swears/slurs.");
+            sender.sendMessage(ChatColor.AQUA + "The options for the filter command are: on/off, mode, staff, notes, spam, bot, speed, swears/slurs.");
         }
         return true;
     }
