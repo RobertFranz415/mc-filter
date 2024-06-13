@@ -8,6 +8,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerChatEvent;
@@ -20,7 +21,7 @@ import java.util.*;
 
 public class ChatFilter implements Listener {
     private final ChatFilterMC plugin;
-    private final ConfigUtil filterConfig;
+    private ConfigUtil filterConfig;
     private ConfigUtil historyConfig;
     private List<String> swearList = new ArrayList<>();
     private List<String> slurList = new ArrayList<>();
@@ -30,11 +31,7 @@ public class ChatFilter implements Listener {
     public ChatFilter(ChatFilterMC plugin) {
         Bukkit.getPluginManager().registerEvents(this, plugin);
         this.plugin = plugin;
-        this.filterConfig = plugin.getFilterConfig();
-        this.historyConfig = plugin.getHistoryConfig();
-
-        this.swearList = filterConfig.getConfig().getStringList("swears.regex");
-        this.slurList = filterConfig.getConfig().getStringList("slurs.regex");
+        this.setConfigs();
 
     }
 
@@ -203,7 +200,7 @@ public class ChatFilter implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     private void onPlayerChatEvent(AsyncPlayerChatEvent event) {
         //TODO Uncomment this
 //        if (event.getPlayer().isOp() || event.getPlayer().hasPermission("filter.exception")) return;
@@ -212,7 +209,7 @@ public class ChatFilter implements Listener {
         }
         UUID uuid = event.getPlayer().getUniqueId();
 
-        String message = event.getMessage();
+        String message = event.getMessage().toLowerCase();
         String[] msg = message.split(" ");
 
         // Using these booleans instead of implementing actions when found so that
@@ -292,5 +289,13 @@ public class ChatFilter implements Listener {
                     break;
             }
         }
+    }
+
+    public void setConfigs(){
+        this.filterConfig = this.plugin.getFilterConfig();
+        this.historyConfig = this.plugin.getHistoryConfig();
+
+        this.swearList = this.filterConfig.getConfig().getStringList("swears.regex");
+        this.slurList = this.filterConfig.getConfig().getStringList("slurs.regex");
     }
 }
