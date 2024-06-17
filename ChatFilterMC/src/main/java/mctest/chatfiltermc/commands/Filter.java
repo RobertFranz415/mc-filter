@@ -331,7 +331,7 @@ public class Filter implements Listener, CommandExecutor {
                 }
                 break;
             default:
-                sender.sendMessage(ChatColor.AQUA + "Plugin created by DeathsValentine and Mithraea");
+                sender.sendMessage(ChatColor.AQUA + "Plugin created by Mithraea and DeathsValentine");
                 sender.sendMessage(ChatColor.AQUA + "The options for the filter command are: on/off, mode, staff, notes, spam, bot, speed, swears/slurs.");
                 break;
         }
