@@ -36,8 +36,6 @@ public class ChatFilter implements Listener {
     }
 
     //TODO
-    // Add exceptions or decide to just use permission/op
-    // Possibly detect option in command with [msg] and replace with message by passing through original maessage to handlers
     // Clean up/modularize code
     // If new entry: make strikes come first in yaml file
     public void handleSlurs(UUID uuid, String msg) {
@@ -221,7 +219,7 @@ public class ChatFilter implements Listener {
         for (int i = 0; i < msg.length; i++) {
             if (this.filterConfig.getConfig().getBoolean("slurs.enabled")) {
                 for (String rex : this.slurList) {
-                    if (msg[i].matches(rex)) {
+                    if (msg[i].toLowerCase().matches(rex)) {
                         slurFound = true;
                         //TODO if() statement not necessary, not sure how/if effects efficiency
                         if (Objects.equals(this.filterConfig.getConfig().getString("slurs.mode"), "censor")) {
@@ -232,7 +230,7 @@ public class ChatFilter implements Listener {
             }
             if (this.filterConfig.getConfig().getBoolean("swears.enabled")) {
                 for (String rex : this.swearList) {
-                    if (msg[i].matches(rex)) {
+                    if (msg[i].toLowerCase().matches(rex)) {
                         swearFound = true;
 
                         if (Objects.equals(this.filterConfig.getConfig().getString("swears.mode"), "censor")) {
@@ -258,7 +256,13 @@ public class ChatFilter implements Listener {
                     event.setMessage(clean);
                     break;
                 case "replace":
-                    event.setMessage(Objects.requireNonNull(filterConfig.getConfig().getString("slurs.replaceWith")));
+                    List<String> replaceList = new ArrayList<>(this.filterConfig.getConfig().getStringList("slurs.replaceWith"));
+                    if (replaceList.isEmpty()) {
+                        event.setCancelled(true);
+                    }
+                    Random random = new Random();
+                    int num = random.nextInt(replaceList.size());
+                    event.setMessage(Objects.requireNonNull(replaceList.get(num)));
                     break;
                 case "clear":
                     event.setCancelled(true);
@@ -280,7 +284,13 @@ public class ChatFilter implements Listener {
                     event.setMessage(clean);
                     break;
                 case "replace":
-                    event.setMessage(Objects.requireNonNull(filterConfig.getConfig().getString("swears.replaceWith")));
+                    List<String> replaceList = new ArrayList<>(this.filterConfig.getConfig().getStringList("swears.replaceWith"));
+                    if (replaceList.isEmpty()) {
+                        event.setCancelled(true);
+                    }
+                    Random random = new Random();
+                    int num = random.nextInt(replaceList.size());
+                    event.setMessage(Objects.requireNonNull(replaceList.get(num)));
                     break;
                 case "clear":
                     event.setCancelled(true);

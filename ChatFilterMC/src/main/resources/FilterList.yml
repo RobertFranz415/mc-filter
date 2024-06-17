@@ -19,7 +19,9 @@ swears:
   enabled: true
   mode: censor
   partialMatches: false
-  replaceWith: I have poor vocabulary
+  replaceWith:
+    - I have poor vocabulary
+    - I am an adult!
   msgToStaff: '[senderName] is trying to swear.'
   msgToStaffEnabled: true
   commands:
@@ -36,8 +38,9 @@ slurs:
   enabled: true
   mode: replace
   partialMatches: false
-  replaceWith: I use slurs as a replacement of actual humor so that if anyone calls
-    me out I can call them triggered instead of having any self-reflection.
+  replaceWith:
+    - I use slurs as a replacement of actual humor so that if anyone calls me out I can call them triggered instead of having any self-reflection.
+    - I am stuck in my edgy phase
   msgToStaff: '[senderName] tried to use a slur!'
   msgToStaffEnabled: true
   commands:

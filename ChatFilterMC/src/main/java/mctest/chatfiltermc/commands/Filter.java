@@ -41,8 +41,9 @@ public class Filter implements Listener, CommandExecutor {
         //TODO Probs dont need this
         if (!sender.hasPermission("filter") || !sender.isOp()) return true;
 
-        switch(args[0].toLowerCase()){
-            case "on": case "off":
+        switch (args[0].toLowerCase()) {
+            case "on":
+            case "off":
                 Boolean state = args[0].equals("on");
                 this.filterConfig.getConfig().set("swears.enabled", state);
                 this.filterConfig.getConfig().set("slurs.enabled", state);
@@ -211,7 +212,8 @@ public class Filter implements Listener, CommandExecutor {
                     sender.sendMessage(ChatColor.AQUA + "The options are: normal, chill, slow, ice..");
                 }
                 break;
-            case "swears": case "slurs":
+            case "swears":
+            case "slurs":
                 if (Objects.equals(args[1], "on") || Objects.equals(args[1], "off")) {
                     Boolean filterState = args[1].equals("on");
                     switch (args[0]) {
@@ -268,21 +270,6 @@ public class Filter implements Listener, CommandExecutor {
                                 sender.sendMessage(ChatColor.AQUA + "The options for commands are: list, add, and remove..");
                             }
                             break;
-                        case "replace":
-                            if (args[2].equalsIgnoreCase("current")) {
-                                sender.sendMessage(Objects.requireNonNull(this.filterConfig.getConfig().getString(args[0].toLowerCase() + ".replaceWith")));
-                            } else if (args[2].equalsIgnoreCase("edit")) {
-                                StringBuilder cmd = new StringBuilder();
-                                for (int i = 3; i < args.length; i++) {
-                                    cmd.append(args[i]);
-                                    if (i != args.length - 1) cmd.append(" ");
-                                }
-                                this.filterConfig.getConfig().set(args[0].toLowerCase() + ".replaceWith", cmd.toString());
-                                plugin.setFilterConfig(this.filterConfig);
-                            } else {
-                                sender.sendMessage(ChatColor.AQUA + "The possible replace commands are: current and edit.");
-                            }
-                            break;
                         case "staff":
                             if (args[2].equalsIgnoreCase("current")) {
                                 sender.sendMessage(Objects.requireNonNull(this.filterConfig.getConfig().getString(args[0].toLowerCase() + ".msgToStaff")));
@@ -302,9 +289,44 @@ public class Filter implements Listener, CommandExecutor {
                                 sender.sendMessage(ChatColor.AQUA + "The options for staff are: current, edit, and on/off.");
                             }
                             break;
+                        case "replace":
+                            if (args[2].equalsIgnoreCase("list")) {
+                                List<String> replaceList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".replaceWith"));
+                                if (replaceList.isEmpty()) {
+                                    sender.sendMessage(ChatColor.AQUA + "No replacement messages currently set.");
+                                }
+                                for (int i = 0; i < replaceList.size(); i++) {
+                                    int num = i + 1;
+                                    sender.sendMessage(num + ": " + replaceList.get(i));
+                                }
+                            } else if (args[2].equalsIgnoreCase("add")) {
+                                List<String> replaceList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".replaceWith"));
+                                StringBuilder msg = new StringBuilder();
+                                for (int i = 3; i < args.length; i++) {
+                                    msg.append(args[i]);
+                                    if (i != args.length - 1) msg.append(" ");
+                                }
+                                replaceList.add(msg.toString());
+                                this.filterConfig.getConfig().set(args[0].toLowerCase() + ".replaceWith", replaceList);
+                                plugin.setFilterConfig(this.filterConfig);
+                            } else if (args[2].equalsIgnoreCase("remove")) {
+                                try {
+                                    List<String> replaceList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".replaceWith"));
+                                    int num = Integer.parseInt(args[3]) - 1;
+                                    replaceList.remove(num);
+                                    this.filterConfig.getConfig().set(args[0].toLowerCase() + ".replaceWith", replaceList);
+                                    plugin.setFilterConfig(this.filterConfig);
+                                } catch (Exception e) {
+                                    sender.sendMessage(ChatColor.AQUA + "Please enter the number of the replacement message you want to remove.");
+                                }
+                            } else {
+                                sender.sendMessage(ChatColor.AQUA + "The possible replace commands are: list, add, and remove.");
+                            }
+                            break;
                         default:
                             sender.sendMessage(ChatColor.AQUA + "The possible options are: on/off, mode, replace, commands, and staff.");
                             break;
+
                     }
                 }
                 break;
@@ -577,6 +599,7 @@ public class Filter implements Listener, CommandExecutor {
 //        }
         return true;
     }
+
     private String setCommand(UUID uuid, String msg) {
         if (msg.contains("[date]")) {
             Date now = new Date();
