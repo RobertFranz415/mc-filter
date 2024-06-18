@@ -27,14 +27,11 @@ public class Filter implements Listener, CommandExecutor {
     //TODO
     // Move regex to end of yaml file sections to clean up when more regex added... or make separate files for regex and config stuff
     // Add multiple possible replace messages to be randomly selected
-    // Three strike system
-    // User history/ past offences saved
-    // Clear history
-    // Exceptions list
     // Timeout individual player
     // Change to switch statement for performance
     // Add messages when someone does something to confirm it worked
     // Add catches for if they don't put in enough args because it just throws an error
+    // Change staff to admin (?)
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -42,36 +39,44 @@ public class Filter implements Listener, CommandExecutor {
         if (!sender.hasPermission("filter") || !sender.isOp()) return true;
 
         switch (args[0].toLowerCase()) {
-            case "on":
-            case "off":
+            case "on": case "off":
                 Boolean state = args[0].equals("on");
                 this.filterConfig.getConfig().set("swears.enabled", state);
                 this.filterConfig.getConfig().set("slurs.enabled", state);
                 plugin.setFilterConfig(filterConfig);
+                sender.sendMessage(ChatColor.AQUA + "Filter turned " + args[0].toLowerCase() + ".");
                 break;
             case "mode":
                 if (args[1].equalsIgnoreCase("replace") || args[1].equalsIgnoreCase("censor") || args[1].equalsIgnoreCase("clear")) {
                     this.filterConfig.getConfig().set("swears.mode", args[1]);
                     this.filterConfig.getConfig().set("slurs.mode", args[1]);
                     plugin.setFilterConfig(filterConfig);
+                    sender.sendMessage(ChatColor.AQUA + "Filter mode set to " + args[1].toLowerCase() + ".");
                 } else {
-                    sender.sendMessage(ChatColor.AQUA + "The three selectable modes are: Replace, Censor, Clear");
+                    sender.sendMessage(ChatColor.AQUA + "The three selectable modes are: Replace, Censor, Clear.");
                 }
                 break;
             case "staff":
+                //TODO Add current
                 if (args[1].equalsIgnoreCase("on") || args[1].equalsIgnoreCase("off")) {
-                    this.filterConfig.getConfig().set("swears.msgToStaffEnabled", args[1]);
-                    this.filterConfig.getConfig().set("slurs.msgToStaffEnabled", args[1]);
+                    Boolean staffBool = args[1].equals("on");
+                    this.filterConfig.getConfig().set("swears.msgToStaffEnabled", staffBool);
+                    this.filterConfig.getConfig().set("slurs.msgToStaffEnabled", staffBool);
                     plugin.setFilterConfig(filterConfig);
+                    sender.sendMessage(ChatColor.AQUA + "Admin messages turned " + args[1].toLowerCase() + ".");
+                } else if (args[1].equalsIgnoreCase("current")) {
+                    sender.sendMessage(ChatColor.AQUA + "Current swears staff message: " + ChatColor.WHITE + this.filterConfig.getConfig().getString("swears.msgToStaff"));
+                    sender.sendMessage(ChatColor.AQUA + "Current slurs staff message: " + ChatColor.WHITE + this.filterConfig.getConfig().getString("slurs.msgToStaff"));
                 } else if (args[1].equalsIgnoreCase("edit")) {
                     StringBuilder cmd = new StringBuilder();
-                    for (int i = 3; i < args.length; i++) {
+                    for (int i = 2; i < args.length; i++) {
                         cmd.append(args[i]);
                         if (i != args.length - 1) cmd.append(" ");
                     }
                     this.filterConfig.getConfig().set("swears.msgToStaff", cmd.toString());
                     this.filterConfig.getConfig().set("slurs.msgToStaff", cmd.toString());
                     plugin.setFilterConfig(this.filterConfig);
+                    sender.sendMessage(ChatColor.AQUA + "Changed admin message to: \"" + cmd + ".\"");
                 } else {
                     sender.sendMessage(ChatColor.AQUA + "The staff commands are: on/off and edit.");
                 }
@@ -86,11 +91,12 @@ public class Filter implements Listener, CommandExecutor {
                     uuid = Objects.requireNonNull(Bukkit.getPlayer(args[2])).getUniqueId();
                 } catch (Exception e) {
                     sender.sendMessage(ChatColor.AQUA + "Please enter a valid username.");
-                }
-
-                if (uuid == null) {
                     return true;
                 }
+
+//                if (uuid == null) {
+//                    return true;
+//                }
                 this.historyConfig = plugin.getHistoryConfig();
                 //TODO check if this is needed
                 // or if i also have to do this for strikes, etc
@@ -104,6 +110,7 @@ public class Filter implements Listener, CommandExecutor {
                         sender.sendMessage(ChatColor.AQUA + "This player has no notes related to them!");
                         return true;
                     }
+                    sender.sendMessage(ChatColor.AQUA + "Notes for " + args[2] + ":");
                     for (int i = 0; i < notes.size(); i++) {
                         int num = i + 1;
                         sender.sendMessage(num + ": " + notes.get(i));
@@ -111,14 +118,16 @@ public class Filter implements Listener, CommandExecutor {
                 } else if (args[1].equalsIgnoreCase("add")) {
                     List<String> notes = new ArrayList<>(this.historyConfig.getConfig().getStringList(uuid + ".notes"));
                     StringBuilder note = new StringBuilder();
-                    note.append(sender.getName()).append(": ");
+                    String str = sender.getName().equals("CONSOLE") ? "> " : ": ";
+                    note.append(sender.getName()).append(str);
                     for (int i = 3; i < args.length; i++) {
                         note.append(args[i]);
                         if (i != args.length - 1) note.append(" ");
                     }
-                    notes.add(this.setCommand(uuid, note.toString()));
+                    notes.add(this.setCommand(note.toString()));
                     this.historyConfig.getConfig().set(uuid + ".notes", notes);
                     this.historyConfig.save();
+                    sender.sendMessage(ChatColor.AQUA + "Note added for " + args[2] + ".");
                 } else if (args[1].equalsIgnoreCase("remove")) {
                     if (args.length == 3) {
                         sender.sendMessage(ChatColor.AQUA + "Must enter a valid number, all, or history.");
@@ -128,15 +137,17 @@ public class Filter implements Listener, CommandExecutor {
                         this.historyConfig.getConfig().set(uuid + ".notes", new ArrayList<String>());
                         this.historyConfig.save();
                         plugin.setHistoryConfig(this.historyConfig);
+                        sender.sendMessage(ChatColor.AQUA + "Removed all notes for " + args[2] + ".");
                     } else if (Objects.equals(args[3], "history")) {
                         //TODO could remove based off key word
                         List<String> notes = new ArrayList<>(this.historyConfig.getConfig().getStringList(uuid + ".notes"));
 
-                        notes.removeIf(note -> note.contains("CONSOLE:"));
+                        notes.removeIf(note -> note.contains("CONSOLE>"));
 
                         this.historyConfig.getConfig().set(uuid + ".notes", notes);
                         this.historyConfig.save();
                         plugin.setHistoryConfig(this.historyConfig);
+                        sender.sendMessage(ChatColor.AQUA + "Removed the chat history from notes of " + args[2] + ".");
                     } else {
                         //TODO could use regex to detect if int
                         try {
@@ -146,6 +157,7 @@ public class Filter implements Listener, CommandExecutor {
                             this.historyConfig.getConfig().set(uuid + ".notes", notes);
                             this.historyConfig.save();
                             plugin.setHistoryConfig(this.historyConfig);
+                            sender.sendMessage(ChatColor.AQUA + "Removed note " + args[3] + " for " + args[2] + ".");
                         } catch (Exception e) {
                             sender.sendMessage(ChatColor.AQUA + "Please enter a valid number of the note you want to remove.");
                         }
@@ -153,18 +165,19 @@ public class Filter implements Listener, CommandExecutor {
                 } else if (args[1].equalsIgnoreCase("strikes")) {
                     //TODO figure out best order of command... currently /filter notes strike [player] clear swears, etc...
                     // possibly add set command to manually set number of strikes
+                    // Make sure args[2] is a username
                     if (args.length >= 4) {
                         if (args[3].equalsIgnoreCase("clear")) {
-                            Bukkit.getLogger().info("Args length: " + args.length);
                             if (args.length == 4) {
-                                Bukkit.getLogger().info("Args length is 4!!!");
                                 this.historyConfig.getConfig().set(uuid + ".slurs.count", 0);
                                 this.historyConfig.getConfig().set(uuid + ".swears.count", 0);
+                                sender.sendMessage(ChatColor.AQUA + "Removed all of the strikes for " + args[2] + ".");
                             } else if (args[4].equalsIgnoreCase("swears")) {
-                                Bukkit.getLogger().info("CLEAR SWEARS!!!");
                                 this.historyConfig.getConfig().set(uuid + ".swears.count", 0);
+                                sender.sendMessage(ChatColor.AQUA + "Removed the swear strikes for " + args[2] + ".");
                             } else if (args[4].equalsIgnoreCase("slurs")) {
                                 this.historyConfig.getConfig().set(uuid + ".slurs.count", 0);
+                                sender.sendMessage(ChatColor.AQUA + "Removed the slur strikes for " + args[2] + ".");
                             } else {
                                 sender.sendMessage(ChatColor.AQUA + "Clear can only be followed by 'slurs' or 'swears'.");
                             }
@@ -184,46 +197,51 @@ public class Filter implements Listener, CommandExecutor {
                 }
                 break;
             case "spam":
-                if (Objects.equals(args[1], "on") || Objects.equals(args[1], "off")) {
+                if (Objects.equals(args[1].toLowerCase(), "on") || Objects.equals(args[1].toLowerCase(), "off")) {
                     Boolean spamState = args[1].equals("on");
                     this.filterConfig.getConfig().set("spam.enabled", spamState);
                     this.filterConfig.save();
                     plugin.setFilterConfig(filterConfig);
+                    sender.sendMessage(ChatColor.AQUA + "Spam detection turned " + args[1].toLowerCase() + ".");
                 } else {
                     sender.sendMessage(ChatColor.AQUA + "The options are: on and off.");
                 }
                 break;
             case "bot":
-                if (Objects.equals(args[1], "on") || Objects.equals(args[1], "off")) {
+                if (Objects.equals(args[1].toLowerCase(), "on") || Objects.equals(args[1].toLowerCase(), "off")) {
                     Boolean botState = args[1].equals("on");
                     this.filterConfig.getConfig().set("bot.enabled", botState);
                     this.filterConfig.save();
                     plugin.setFilterConfig(filterConfig);
+                    sender.sendMessage(ChatColor.AQUA + "Bot detection set " + args[1].toLowerCase() + ".");
                 } else {
                     sender.sendMessage(ChatColor.AQUA + "The options are: on and off.");
                 }
                 break;
             case "speed":
-                if (Objects.equals(args[1], "normal") || Objects.equals(args[1], "chill") || Objects.equals(args[1], "slow") || Objects.equals(args[1], "ice")) {
-                    this.filterConfig.getConfig().set("chatSpeed.mode", args[1]);
+                if (Objects.equals(args[1].toLowerCase(), "normal") || Objects.equals(args[1].toLowerCase(), "chill") || Objects.equals(args[1].toLowerCase(), "slow") || Objects.equals(args[1].toLowerCase(), "ice")) {
+                    this.filterConfig.getConfig().set("chatSpeed.mode", args[1].toLowerCase());
                     this.filterConfig.save();
                     plugin.setFilterConfig(filterConfig);
+                    sender.sendMessage(ChatColor.AQUA + "Chat speed set to " + args[1].toLowerCase());
                 } else {
                     sender.sendMessage(ChatColor.AQUA + "The options are: normal, chill, slow, ice..");
                 }
                 break;
-            case "swears":
-            case "slurs":
-                if (Objects.equals(args[1], "on") || Objects.equals(args[1], "off")) {
-                    Boolean filterState = args[1].equals("on");
-                    switch (args[0]) {
+            case "swears": case "slurs":
+                if (Objects.equals(args[1].toLowerCase(), "on") || Objects.equals(args[1].toLowerCase(), "off")) {
+                    Boolean filterState = args[1].equalsIgnoreCase("on");
+                    //TODO fix this switch... its clunky... can just do what i did in mode below instead of switch
+                    switch (args[0].toLowerCase()) {
                         case "swears":
                             this.filterConfig.getConfig().set("swears.enabled", filterState);
                             plugin.setFilterConfig(filterConfig);
+                            sender.sendMessage(ChatColor.AQUA + "Swear filter turned " + args[1].toLowerCase() + ".");
                             break;
                         case "slurs":
                             this.filterConfig.getConfig().set("slurs.enabled", filterState);
                             plugin.setFilterConfig(filterConfig);
+                            sender.sendMessage(ChatColor.AQUA + "Slur filter turned " + args[1].toLowerCase() + ".");
                             break;
                         default:
                             sender.sendMessage(ChatColor.AQUA + "The options are: on and off.");
@@ -233,8 +251,9 @@ public class Filter implements Listener, CommandExecutor {
                     switch (args[1].toLowerCase()) {
                         case "mode":
                             if (args[2].equalsIgnoreCase("replace") || args[2].equalsIgnoreCase("censor") || args[2].equalsIgnoreCase("clear")) {
-                                this.filterConfig.getConfig().set(args[0].toLowerCase() + ".mode", args[2]);
+                                this.filterConfig.getConfig().set(args[0].toLowerCase() + ".mode", args[2].toLowerCase());
                                 plugin.setFilterConfig(filterConfig);
+                                sender.sendMessage(ChatColor.AQUA + "Filter mode set to " + args[2].toLowerCase() + " for " + args[0].toLowerCase() + ".");
                             } else {
                                 sender.sendMessage(ChatColor.AQUA + "The three selectable modes are: replace, censor, clear.");
                             }
@@ -242,6 +261,7 @@ public class Filter implements Listener, CommandExecutor {
                         case "commands":
                             if (args[2].equalsIgnoreCase("list")) {
                                 List<String> commandList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".commands"));
+                                sender.sendMessage(ChatColor.AQUA + "Filter commands for " + args[0].toLowerCase() + ":");
                                 for (int i = 0; i < commandList.size(); i++) {
                                     int num = i + 1;
                                     sender.sendMessage(num + ": " + commandList.get(i));
@@ -256,6 +276,7 @@ public class Filter implements Listener, CommandExecutor {
                                 commandList.add(cmd.toString());
                                 this.filterConfig.getConfig().set(args[0].toLowerCase() + ".commands", commandList);
                                 plugin.setFilterConfig(this.filterConfig);
+                                sender.sendMessage(ChatColor.AQUA + "Added filter command for " + args[0].toLowerCase());
                             } else if (args[2].equalsIgnoreCase("remove")) {
                                 try {
                                     List<String> commandList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".commands"));
@@ -263,6 +284,7 @@ public class Filter implements Listener, CommandExecutor {
                                     commandList.remove(num);
                                     this.filterConfig.getConfig().set(args[0].toLowerCase() + ".commands", commandList);
                                     plugin.setFilterConfig(this.filterConfig);
+                                    sender.sendMessage(ChatColor.AQUA + "Removed filter command for " + args[0] + ".");
                                 } catch (Exception e) {
                                     sender.sendMessage(ChatColor.AQUA + "Please enter the number of the command you want to remove.");
                                 }
@@ -272,6 +294,7 @@ public class Filter implements Listener, CommandExecutor {
                             break;
                         case "staff":
                             if (args[2].equalsIgnoreCase("current")) {
+                                sender.sendMessage(ChatColor.AQUA + "Current staff message for " + args[0].toLowerCase() + ":");
                                 sender.sendMessage(Objects.requireNonNull(this.filterConfig.getConfig().getString(args[0].toLowerCase() + ".msgToStaff")));
                             } else if (args[2].equalsIgnoreCase("edit")) {
                                 StringBuilder cmd = new StringBuilder();
@@ -281,16 +304,19 @@ public class Filter implements Listener, CommandExecutor {
                                 }
                                 this.filterConfig.getConfig().set(args[0].toLowerCase() + ".msgToStaff", cmd.toString());
                                 plugin.setFilterConfig(this.filterConfig);
+                                sender.sendMessage(ChatColor.AQUA + "Staff message for " + args[0].toLowerCase() + " changed.");
                             } else if (args[2].equalsIgnoreCase("on") || args[2].equalsIgnoreCase("off")) {
                                 Boolean msgState = args[2].equals("on");
                                 this.filterConfig.getConfig().set("swears.msgToStaffEnabled", msgState);
                                 plugin.setFilterConfig(filterConfig);
+                                sender.sendMessage(ChatColor.AQUA + "Staff message for " + args[0].toLowerCase() + " turned " + args[2].toLowerCase() + ".");
                             } else {
                                 sender.sendMessage(ChatColor.AQUA + "The options for staff are: current, edit, and on/off.");
                             }
                             break;
                         case "replace":
                             if (args[2].equalsIgnoreCase("list")) {
+                                sender.sendMessage(ChatColor.AQUA + "The current replacement messages for " + args[0].toLowerCase() + " are: ");
                                 List<String> replaceList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".replaceWith"));
                                 if (replaceList.isEmpty()) {
                                     sender.sendMessage(ChatColor.AQUA + "No replacement messages currently set.");
@@ -309,6 +335,7 @@ public class Filter implements Listener, CommandExecutor {
                                 replaceList.add(msg.toString());
                                 this.filterConfig.getConfig().set(args[0].toLowerCase() + ".replaceWith", replaceList);
                                 plugin.setFilterConfig(this.filterConfig);
+                                sender.sendMessage(ChatColor.AQUA + "Added replacement message for " + args[0] + ".");
                             } else if (args[2].equalsIgnoreCase("remove")) {
                                 try {
                                     List<String> replaceList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".replaceWith"));
@@ -316,6 +343,7 @@ public class Filter implements Listener, CommandExecutor {
                                     replaceList.remove(num);
                                     this.filterConfig.getConfig().set(args[0].toLowerCase() + ".replaceWith", replaceList);
                                     plugin.setFilterConfig(this.filterConfig);
+                                    sender.sendMessage(ChatColor.AQUA + "Removed replacement message for " + args[0] + ".");
                                 } catch (Exception e) {
                                     sender.sendMessage(ChatColor.AQUA + "Please enter the number of the replacement message you want to remove.");
                                 }
@@ -331,8 +359,8 @@ public class Filter implements Listener, CommandExecutor {
                 }
                 break;
             default:
-                sender.sendMessage(ChatColor.AQUA + "Plugin created by Mithraea and DeathsValentine");
                 sender.sendMessage(ChatColor.AQUA + "The options for the filter command are: on/off, mode, staff, notes, spam, bot, speed, swears/slurs.");
+                sender.sendMessage(ChatColor.AQUA + "Plugin created by Mithraea and DeathsValentine");
                 break;
         }
 //        if (args[0].equalsIgnoreCase("on") || args[0].equalsIgnoreCase("off")) {
@@ -600,7 +628,7 @@ public class Filter implements Listener, CommandExecutor {
         return true;
     }
 
-    private String setCommand(UUID uuid, String msg) {
+    private String setCommand(String msg) {
         if (msg.contains("[date]")) {
             Date now = new Date();
             SimpleDateFormat format = new SimpleDateFormat("MM/dd/yyyy HH:mm");

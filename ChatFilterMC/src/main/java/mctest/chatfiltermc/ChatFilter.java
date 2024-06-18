@@ -54,24 +54,23 @@ public class ChatFilter implements Listener {
             Bukkit.broadcast(ChatColor.RED + msgToStaff, "filter");
         }
 
-        //TODO Possibly add: message, dates, last date, etc
+        //TODO
         // might need to do plain ol if-statement instead of ternary if going to init more than just count
         // messages separate from notes?
-        if (this.filterConfig.getConfig().getBoolean("swears.history")) {
-            int cnt = !historyConfig.getConfig().contains(uuid + ".slurs.count") ? 1 : historyConfig.getConfig().getInt(uuid + ".slurs.count")+1;
-            this.historyConfig.getConfig().set(uuid + ".slurs.count", cnt);
-            plugin.setHistoryConfig(this.historyConfig);
-
-            int maxStrikes = this.filterConfig.getConfig().getInt("slurs.maxStrikes");
-            if (cnt >= maxStrikes && maxStrikes != -1) {
-                List<String> actions = filterConfig.getConfig().getStringList("slurs.strikeActions");
-                for (String command : actions) {
-                    if (command.contains("[senderName]")) {
-                        command = command.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
-                    }
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-                }
-            }
+        if (this.filterConfig.getConfig().getBoolean("slurs.history")) {
+            this.setHistory(uuid, msg, "slurs");
+//                int cnt = !historyConfig.getConfig().contains(uuid + ".slurs.count") ? 1 : historyConfig.getConfig().getInt(uuid + ".slurs.count")+1;
+//                this.historyConfig.getConfig().set(uuid + ".slurs.count", cnt);
+//                plugin.setHistoryConfig(this.historyConfig);
+//
+//                int maxStrikes = this.filterConfig.getConfig().getInt("slurs.maxStrikes");
+//                if (cnt >= maxStrikes && maxStrikes != -1) {
+//                    List<String> actions = filterConfig.getConfig().getStringList("slurs.strikeActions");
+//                    for (String command : actions) {
+//                        this.setCommand(command, uuid, msg);
+//                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+//                    }
+//                }
         }
         //So that the config will update if any commands update the history
         plugin.setHistoryConfig(this.historyConfig);
@@ -99,38 +98,54 @@ public class ChatFilter implements Listener {
 
         // History
         if (this.filterConfig.getConfig().getBoolean("swears.history")) {
-            int cnt = !historyConfig.getConfig().contains(uuid + ".swears.count") ? 1 : historyConfig.getConfig().getInt(uuid + ".swears.count")+1;
-            this.historyConfig.getConfig().set(uuid + ".swears.count", cnt);
-            plugin.setHistoryConfig(this.historyConfig);
-
-            int maxStrikes = this.filterConfig.getConfig().getInt("swears.maxStrikes");
-            if (cnt >= maxStrikes && maxStrikes != -1) {
-                List<String> actions = filterConfig.getConfig().getStringList("swears.strikeActions");
-                for (String command : actions) {
-                    if (command.contains("[senderName]")) {
-                        command = command.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
-                    }
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-                }
-            }
+            this.setHistory(uuid, msg, "swears");
+//            int cnt = !historyConfig.getConfig().contains(uuid + ".swears.count") ? 1 : historyConfig.getConfig().getInt(uuid + ".swears.count")+1;
+//            this.historyConfig.getConfig().set(uuid + ".swears.count", cnt);
+//            plugin.setHistoryConfig(this.historyConfig);
+//
+//            int maxStrikes = this.filterConfig.getConfig().getInt("swears.maxStrikes");
+//            if (cnt >= maxStrikes && maxStrikes != -1) {
+//                List<String> actions = filterConfig.getConfig().getStringList("swears.strikeActions");
+//                for (String command : actions) {
+//                    this.setCommand(command, uuid, msg);
+//                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+//                }
+//            }
         }
         //So that the config will update if any commands update the history
         plugin.setHistoryConfig(this.historyConfig);
     }
 
+    private void setHistory(UUID uuid, String msg, String tier) {
+        int cnt = !historyConfig.getConfig().contains(uuid + "." + tier + ".count") ? 1 : historyConfig.getConfig().getInt(uuid + "." + tier + ".count") + 1;
+        this.historyConfig.getConfig().set(uuid + "." + tier + ".count", cnt);
+        plugin.setHistoryConfig(this.historyConfig);
+
+        int maxStrikes = this.filterConfig.getConfig().getInt(tier + ".maxStrikes");
+        if (cnt >= maxStrikes && maxStrikes != -1) {
+            List<String> actions = filterConfig.getConfig().getStringList(tier + ".strikeActions");
+            for (String command : actions) {
+                this.setCommand(command, uuid, msg);
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+            }
+        }
+    }
+
     private String setCommand(String command, UUID uuid, String msg) {
+        if (command.contains("[senderName] [msg]")) {
+            command = command.replace("[senderName] [msg]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName() + ": \"" + msg + "\"");
+        }
         if (command.contains("[senderName]")) {
             command = command.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
+        }
+        if (command.contains("[msg]")) {
+            command = command.replace("[msg]", ": \"" + msg + "\"");
         }
         if (command.contains("[date]")) {
             Date now = new Date();
             SimpleDateFormat format = new SimpleDateFormat("MM/dd/yyyy HH:mm");
             command = command.replace("[date]", "[" + format.format(now) + "]");
         }
-        if (command.contains("[msg]")) {
-            command = command.replace("[msg]", ": \"" + msg + "\"");
-        }
-
         return command;
     }
 
