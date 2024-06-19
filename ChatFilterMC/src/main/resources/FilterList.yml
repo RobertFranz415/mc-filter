@@ -17,8 +17,8 @@
 
 swears:
   enabled: true
-  mode: censor
   partialMatches: false
+  mode: censor
   replaceWith:
     - I have poor vocabulary
     - I am an adult!
@@ -36,8 +36,8 @@ swears:
 
 slurs:
   enabled: true
-  mode: replace
   partialMatches: false
+  mode: replace
   replaceWith:
     - I use slurs as a replacement of actual humor so that if anyone calls me out I can call them triggered instead of having any self-reflection.
     - I am stuck in my edgy phase

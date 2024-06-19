@@ -35,7 +35,7 @@ public class RegexBuilder {
                 statement.append("(\\A|\\s) ");
             }
 
-            statement.append("(");
+            statement.append("^.*(");
 
             for(char c : word){
                 List<String> altLetters = library.getConfig().getStringList(c+"");
@@ -50,7 +50,7 @@ public class RegexBuilder {
                     }
                 }
             }
-            statement.append(")+");
+            statement.append(")+.*$");
 
             if(!filterConfig.getConfig().getBoolean("slurs.partialMatches")){
                 statement.append(" (\\z|\\s)");
