@@ -252,7 +252,8 @@ public class Filter implements Listener, CommandExecutor {
                     sender.sendMessage(ChatColor.AQUA + "The options are: normal, chill, slow, ice..");
                 }
                 break;
-            case "swears": case "slurs":
+            case "swears":
+            case "slurs":
                 try {
                     switch (args[1].toLowerCase()) {
                         case "on":
@@ -325,7 +326,8 @@ public class Filter implements Listener, CommandExecutor {
                             break;
                         case "staff":
                             switch (args[2].toLowerCase()) {
-                                case "on": case "off":
+                                case "on":
+                                case "off":
                                     Boolean msgState = args[2].equals("on");
                                     this.filterConfig.getConfig().set("swears.msgToStaffEnabled", msgState);
                                     plugin.setFilterConfig(filterConfig);

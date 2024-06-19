@@ -37,13 +37,17 @@ public final class ChatFilterMC extends JavaPlugin {
         this.regexBuilder = new RegexBuilder(this);
 
         try{
-            this.regexBuilder.buildSwearRegex();
-            this.regexBuilder.buildSlurRegex();
+            this.regexBuilder.buildRegex("swears");
+            this.regexBuilder.buildRegex("slurs");
+//            this.regexBuilder.buildSwearRegex();
+//            this.regexBuilder.buildSlurRegex();
         }catch (OutOfMemoryError e){
             Bukkit.getLogger().info("Out of memory. Attempting to try again once server is finished starting up.");
             Bukkit.getScheduler().runTaskLater(this, () -> {
-                this.regexBuilder.buildSwearRegex();
-                this.regexBuilder.buildSlurRegex();
+                this.regexBuilder.buildRegex("swears");
+                this.regexBuilder.buildRegex("slurs");
+//                this.regexBuilder.buildSwearRegex();
+//                this.regexBuilder.buildSlurRegex();
             }, 1);
         }
     }
