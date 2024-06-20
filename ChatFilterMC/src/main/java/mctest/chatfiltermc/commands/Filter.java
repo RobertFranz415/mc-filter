@@ -28,11 +28,10 @@ public class Filter implements Listener, CommandExecutor {
     }
 
     //TODO
-    // Move regex to end of yaml file sections to clean up when more regex added... or make separate files for regex and config stuff
-    // Add multiple possible replace messages to be randomly selected
+    // Decide if there should be separate files for regex and config stuff
+    // Add command to create whole new tier
     // Timeout individual player
-    // Change to switch statement for performance
-    // Add messages when someone does something to confirm it worked
+    // Figure out if possible to change final groups command to switch
     // Add catches for if they don't put in enough args because it just throws an error
     // Change staff to admin (?)
 

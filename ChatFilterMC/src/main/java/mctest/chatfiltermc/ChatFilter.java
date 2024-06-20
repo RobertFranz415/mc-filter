@@ -189,15 +189,13 @@ public class ChatFilter implements Listener {
 
         for (int i = 0; i < msg.length; i++) {
             for (String tier : enabled) {
-                //TODO This is triggering for every word
                 for (String rex : this.filterConfig.getConfig().getStringList("groups." + tier + ".regex")) {
                     if (msg[i].toLowerCase().matches(rex)) {
-                        Bukkit.getLogger().info("Tier: " + tier + "  > " + msg[i]);
                         foundMap.put(tier, true);
                         //TODO if() statement not necessary, not sure how/if effects efficiency
-                        if (Objects.equals(this.filterConfig.getConfig().getString("groups." + tier + ".mode"), "censor")) {
+                        //if (Objects.equals(this.filterConfig.getConfig().getString("groups." + tier + ".mode"), "censor")) {
                             msg[i] = "****";
-                        }
+                        //}
                     }
                 }
             }
@@ -218,7 +216,6 @@ public class ChatFilter implements Listener {
                 switch (mode) {
                     case "censor":
                         String clean = String.join(" ", msg);
-                        ;
                         event.setMessage(clean);
                         break;
                     case "replace":

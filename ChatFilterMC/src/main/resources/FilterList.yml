@@ -18,6 +18,7 @@
 groups:
   slurs:
     enabled: true
+    level: 1
     partialMatches: false
     mode: replace
     replaceWith:
@@ -38,6 +39,7 @@ groups:
 
   swears:
     enabled: true
+    level: 2
     partialMatches: false
     mode: censor
     replaceWith:
@@ -57,6 +59,7 @@ groups:
 
   annoy:
     enabled: true
+    level: 4
     partialMatches: false
     mode: replace
     replaceWith:
@@ -73,6 +76,26 @@ groups:
       - msg [senderName] Stop it buddy!
     regex:
       - ^.*(f|ƒ|£|🇫|ẝ|ꞙ|ꬵ|🅕)+\s*(u|v|🇺|ʋ|υ|ս|ᴜ|ꞟ|ꭎ|ꭒ|𑣘|ט|𑜆|🅤)?+\s*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(k|\|<|🇰|🅚)+.*$
+
+    cringe:
+      enabled: true
+      level: 3
+      partialMatches: false
+      mode: replace
+      replaceWith:
+        - I am cringe
+        - I am a cringe child!
+      msgToStaff: '[senderName] is being cringe.'
+      msgToStaffEnabled: true
+      commands:
+        - msg [senderName] Don't be cringe.
+        - filter notes add [senderName] [date] [msg]
+      history: true
+      maxStrikes: 100
+      strikeActions:
+        - msg [senderName] Stop it cringe kid!
+      regex:
+        - ^.*(f|ƒ|£|🇫|ẝ|ꞙ|ꬵ|🅕)+\s*(u|v|🇺|ʋ|υ|ս|ᴜ|ꞟ|ꭎ|ꭒ|𑣘|ט|𑜆|🅤)?+\s*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(k|\|<|🇰|🅚)+.*$
 
 # Triggers spam filter if person enters 'numberToTrigger' messages in 'timeAllotted'
 spam:

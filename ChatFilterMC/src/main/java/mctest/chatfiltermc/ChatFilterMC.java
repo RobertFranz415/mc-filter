@@ -42,20 +42,12 @@ public final class ChatFilterMC extends JavaPlugin {
             for (String tier : this.getGroupList()) {
                 this.regexBuilder.buildRegex(tier);
             }
-//            this.regexBuilder.buildRegex("swears");
-//            this.regexBuilder.buildRegex("slurs");
-//            this.regexBuilder.buildSwearRegex();
-//            this.regexBuilder.buildSlurRegex();
         }catch (OutOfMemoryError e){
             Bukkit.getLogger().info("Out of memory. Attempting to try again once server is finished starting up.");
             Bukkit.getScheduler().runTaskLater(this, () -> {
                 for (String tier : this.getGroupList()) {
                     this.regexBuilder.buildRegex(tier);
                 }
-//                this.regexBuilder.buildRegex("swears");
-//                this.regexBuilder.buildRegex("slurs");
-//                this.regexBuilder.buildSwearRegex();
-//                this.regexBuilder.buildSlurRegex();
             }, 1);
         }
 
@@ -107,7 +99,12 @@ public final class ChatFilterMC extends JavaPlugin {
 
     private void initGroupList() {
         try {
-            this.groupList = new ArrayList<>(Objects.requireNonNull(this.getFilterConfig().getConfig().getConfigurationSection("groups")).getKeys(false));
+            List<String> unordered = new ArrayList<>(Objects.requireNonNull(this.getFilterConfig().getConfig().getConfigurationSection("groups")).getKeys(false));
+            this.groupList = new ArrayList<>(Collections.nCopies(unordered.size(), null));
+            for (String group : unordered) {
+                int level = this.getFilterConfig().getConfig().getInt("groups." + group + ".level") - 1;
+                this.groupList.set(level, group);
+            }
         } catch (Exception e) {
             Bukkit.getLogger().info("Filter groups empty!");
         }
