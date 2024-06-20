@@ -1,5 +1,6 @@
 package mctest.chatfiltermc.commands;
 
+import com.sun.tools.javac.util.StringUtils;
 import mctest.chatfiltermc.ChatFilterMC;
 import mctest.chatfiltermc.util.ConfigUtil;
 import org.bukkit.Bukkit;
@@ -16,12 +17,14 @@ public class Filter implements Listener, CommandExecutor {
     private final ChatFilterMC plugin;
     private final ConfigUtil filterConfig;
     private ConfigUtil historyConfig;
+    private final List<String> groups;
 
     public Filter(ChatFilterMC plugin) {
         Bukkit.getPluginManager().registerEvents(this, plugin);
         this.plugin = plugin;
         this.filterConfig = plugin.getFilterConfig();
         this.historyConfig = new ConfigUtil(plugin, "History.yml");
+        this.groups = plugin.getGroupList();
     }
 
     //TODO
@@ -42,15 +45,17 @@ public class Filter implements Listener, CommandExecutor {
             case "on":
             case "off":
                 Boolean state = args[0].equals("on");
-                this.filterConfig.getConfig().set("swears.enabled", state);
-                this.filterConfig.getConfig().set("slurs.enabled", state);
+                for (String tier : this.groups) {
+                    this.filterConfig.getConfig().set("groups." + tier + ".enabled", state);
+                }
                 plugin.setFilterConfig(filterConfig);
                 sender.sendMessage(ChatColor.AQUA + "Filter turned " + args[0].toLowerCase() + ".");
                 break;
             case "mode":
                 if (args[1].equalsIgnoreCase("replace") || args[1].equalsIgnoreCase("censor") || args[1].equalsIgnoreCase("clear")) {
-                    this.filterConfig.getConfig().set("swears.mode", args[1]);
-                    this.filterConfig.getConfig().set("slurs.mode", args[1]);
+                    for (String tier : this.groups) {
+                        this.filterConfig.getConfig().set("groups." + tier + ".mode", args[1].toLowerCase());
+                    }
                     plugin.setFilterConfig(filterConfig);
                     sender.sendMessage(ChatColor.AQUA + "Filter mode set to " + args[1].toLowerCase() + ".");
                 } else {
@@ -62,14 +67,16 @@ public class Filter implements Listener, CommandExecutor {
                     case "on":
                     case "off":
                         Boolean staffBool = args[1].equals("on");
-                        this.filterConfig.getConfig().set("swears.msgToStaffEnabled", staffBool);
-                        this.filterConfig.getConfig().set("slurs.msgToStaffEnabled", staffBool);
+                        for (String tier : this.groups) {
+                            this.filterConfig.getConfig().set("groups." + tier + ".msgToStaffEnabled", staffBool);
+                        }
                         plugin.setFilterConfig(filterConfig);
                         sender.sendMessage(ChatColor.AQUA + "Admin messages turned " + args[1].toLowerCase() + ".");
                         break;
                     case "current":
-                        sender.sendMessage(ChatColor.AQUA + "Current swears staff message: " + ChatColor.WHITE + this.filterConfig.getConfig().getString("swears.msgToStaff"));
-                        sender.sendMessage(ChatColor.AQUA + "Current slurs staff message: " + ChatColor.WHITE + this.filterConfig.getConfig().getString("slurs.msgToStaff"));
+                        for (String tier : this.groups) {
+                            sender.sendMessage(ChatColor.AQUA + "Current " + tier + " staff message: " + ChatColor.WHITE + this.filterConfig.getConfig().getString("groups." + tier + ".msgToStaff"));
+                        }
                         break;
                     case "edit":
                         StringBuilder cmd = new StringBuilder();
@@ -77,8 +84,9 @@ public class Filter implements Listener, CommandExecutor {
                             cmd.append(args[i]);
                             if (i != args.length - 1) cmd.append(" ");
                         }
-                        this.filterConfig.getConfig().set("swears.msgToStaff", cmd.toString());
-                        this.filterConfig.getConfig().set("slurs.msgToStaff", cmd.toString());
+                        for (String tier : this.groups) {
+                            this.filterConfig.getConfig().set("groups." + tier + ".msgToStaff", cmd.toString());
+                        }
                         plugin.setFilterConfig(this.filterConfig);
                         sender.sendMessage(ChatColor.AQUA + "Changed admin message to: \"" + cmd + ".\"");
                         break;
@@ -100,9 +108,6 @@ public class Filter implements Listener, CommandExecutor {
                     return true;
                 }
 
-//                if (uuid == null) {
-//                    return true;
-//                }
                 this.historyConfig = plugin.getHistoryConfig();
                 //TODO check if this is needed
                 // or if i also have to do this for strikes, etc
@@ -179,17 +184,15 @@ public class Filter implements Listener, CommandExecutor {
                         if (args.length >= 4) {
                             if (args[3].equalsIgnoreCase("clear")) {
                                 if (args.length == 4) {
-                                    this.historyConfig.getConfig().set(uuid + ".slurs.count", 0);
-                                    this.historyConfig.getConfig().set(uuid + ".swears.count", 0);
+                                    for (String tier : this.groups) {
+                                        this.historyConfig.getConfig().set(uuid + "." + tier + ".count", 0);
+                                    }
                                     sender.sendMessage(ChatColor.AQUA + "Removed all of the strikes for " + args[2] + ".");
-                                } else if (args[4].equalsIgnoreCase("swears")) {
-                                    this.historyConfig.getConfig().set(uuid + ".swears.count", 0);
-                                    sender.sendMessage(ChatColor.AQUA + "Removed the swear strikes for " + args[2] + ".");
-                                } else if (args[4].equalsIgnoreCase("slurs")) {
-                                    this.historyConfig.getConfig().set(uuid + ".slurs.count", 0);
-                                    sender.sendMessage(ChatColor.AQUA + "Removed the slur strikes for " + args[2] + ".");
+                                } else if (this.groups.contains(args[4].toLowerCase())) {
+                                    this.historyConfig.getConfig().set(uuid + "." + args[4].toLowerCase() + ".count", 0);
+                                    sender.sendMessage(ChatColor.AQUA + "Strikes removed for " + args[2] + ".");
                                 } else {
-                                    sender.sendMessage(ChatColor.AQUA + "Clear can only be followed by 'slurs' or 'swears'.");
+                                    sender.sendMessage(ChatColor.AQUA + "Clear can only be followed by one of the filter groups.");
                                 }
                                 this.historyConfig.save();
                                 plugin.setHistoryConfig(this.historyConfig);
@@ -197,10 +200,11 @@ public class Filter implements Listener, CommandExecutor {
                                 sender.sendMessage(ChatColor.AQUA + "To display strike counts simply enter the username of the person.  To clear strikes add clear after.");
                             }
                         } else {
-                            int slurCnt = (historyConfig.getConfig().getString(uuid + ".slurs.count") == null) ? 0 : historyConfig.getConfig().getInt(uuid + ".slurs.count");
-                            int swearCnt = (historyConfig.getConfig().getString(uuid + ".swears.count") == null) ? 0 : historyConfig.getConfig().getInt(uuid + ".swears.count");
-                            sender.sendMessage("Slur strikes: " + slurCnt);
-                            sender.sendMessage("Swear strikes: " + swearCnt);
+                            sender.sendMessage(ChatColor.AQUA + "Strikes: ");
+                            for (String tier : this.groups) {
+                                int cnt = (historyConfig.getConfig().getString(uuid + "." + tier + ".count") == null) ? 0 : historyConfig.getConfig().getInt(uuid + "." + tier + ".count");
+                                sender.sendMessage("  " + tier + ": " + cnt);
+                            }
                         }
                         break;
                     default:
@@ -252,164 +256,307 @@ public class Filter implements Listener, CommandExecutor {
                     sender.sendMessage(ChatColor.AQUA + "The options are: normal, chill, slow, ice..");
                 }
                 break;
-            case "swears":
-            case "slurs":
-                try {
-                    switch (args[1].toLowerCase()) {
-                        case "on":
-                        case "off":
-                            Boolean filterState = args[1].equalsIgnoreCase("on");
-                            //TODO fix this switch... its clunky... can just do what i did in mode below instead of switch
-                            switch (args[0].toLowerCase()) {
-                                case "swears":
-                                    this.filterConfig.getConfig().set("swears.enabled", filterState);
-                                    plugin.setFilterConfig(filterConfig);
-                                    sender.sendMessage(ChatColor.AQUA + "Swear filter turned " + args[1].toLowerCase() + ".");
-                                    break;
-                                case "slurs":
-                                    this.filterConfig.getConfig().set("slurs.enabled", filterState);
-                                    plugin.setFilterConfig(filterConfig);
-                                    sender.sendMessage(ChatColor.AQUA + "Slur filter turned " + args[1].toLowerCase() + ".");
-                                    break;
-                                default:
-                                    sender.sendMessage(ChatColor.AQUA + "The options are: on and off.");
-                                    break;
-                            }
-                            break;
-                        case "mode":
-                            if (args[2].equalsIgnoreCase("replace") || args[2].equalsIgnoreCase("censor") || args[2].equalsIgnoreCase("clear")) {
-                                this.filterConfig.getConfig().set(args[0].toLowerCase() + ".mode", args[2].toLowerCase());
-                                plugin.setFilterConfig(filterConfig);
-                                sender.sendMessage(ChatColor.AQUA + "Filter mode set to " + args[2].toLowerCase() + " for " + args[0].toLowerCase() + ".");
-                            } else {
-                                sender.sendMessage(ChatColor.AQUA + "The three selectable modes are: replace, censor, clear.");
-                            }
-                            break;
-                        case "commands":
-                            switch (args[2].toLowerCase()) {
-                                case "list":
-                                    List<String> commandList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".commands"));
-                                    sender.sendMessage(ChatColor.AQUA + "Filter commands for " + args[0].toLowerCase() + ":");
-                                    for (int i = 0; i < commandList.size(); i++) {
-                                        int num = i + 1;
-                                        sender.sendMessage(num + ": " + commandList.get(i));
-                                    }
-                                    break;
-                                case "add":
-                                    List<String> commandAddList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".commands"));
-                                    StringBuilder cmd = new StringBuilder();
-                                    for (int i = 3; i < args.length; i++) {
-                                        cmd.append(args[i]);
-                                        if (i != args.length - 1) cmd.append(" ");
-                                    }
-                                    commandAddList.add(cmd.toString());
-                                    this.filterConfig.getConfig().set(args[0].toLowerCase() + ".commands", commandAddList);
-                                    plugin.setFilterConfig(this.filterConfig);
-                                    sender.sendMessage(ChatColor.AQUA + "Added filter command for " + args[0].toLowerCase());
-                                    break;
-                                case "remove":
-                                    try {
-                                        List<String> commandRemoveList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".commands"));
-                                        int num = Integer.parseInt(args[3]) - 1;
-                                        commandRemoveList.remove(num);
-                                        this.filterConfig.getConfig().set(args[0].toLowerCase() + ".commands", commandRemoveList);
-                                        plugin.setFilterConfig(this.filterConfig);
-                                        sender.sendMessage(ChatColor.AQUA + "Removed filter command for " + args[0] + ".");
-                                    } catch (Exception e) {
-                                        sender.sendMessage(ChatColor.AQUA + "Please enter the number of the command you want to remove.");
-                                    }
-                                    break;
-                                default:
-                                    sender.sendMessage(ChatColor.AQUA + "The options for commands are: list, add, and remove..");
-                                    break;
-                            }
-                            break;
-                        case "staff":
-                            switch (args[2].toLowerCase()) {
-                                case "on":
-                                case "off":
-                                    Boolean msgState = args[2].equals("on");
-                                    this.filterConfig.getConfig().set("swears.msgToStaffEnabled", msgState);
-                                    plugin.setFilterConfig(filterConfig);
-                                    sender.sendMessage(ChatColor.AQUA + "Staff message for " + args[0].toLowerCase() + " turned " + args[2].toLowerCase() + ".");
-                                    break;
-                                case "current":
-                                    sender.sendMessage(ChatColor.AQUA + "Current staff message for " + args[0].toLowerCase() + ":");
-                                    sender.sendMessage(Objects.requireNonNull(this.filterConfig.getConfig().getString(args[0].toLowerCase() + ".msgToStaff")));
-                                    break;
-                                case "edit":
-                                    StringBuilder cmd = new StringBuilder();
-                                    for (int i = 3; i < args.length; i++) {
-                                        cmd.append(args[i]);
-                                        if (i != args.length - 1) cmd.append(" ");
-                                    }
-                                    this.filterConfig.getConfig().set(args[0].toLowerCase() + ".msgToStaff", cmd.toString());
-                                    plugin.setFilterConfig(this.filterConfig);
-                                    sender.sendMessage(ChatColor.AQUA + "Staff message for " + args[0].toLowerCase() + " changed.");
-                                    break;
-                                default:
-                                    sender.sendMessage(ChatColor.AQUA + "The options for staff are: current, edit, and on/off.");
-                                    break;
-                            }
-                            break;
-                        case "replace":
-                            switch (args[2].toLowerCase()) {
-                                case "list":
-                                    sender.sendMessage(ChatColor.AQUA + "The current replacement messages for " + args[0].toLowerCase() + " are: ");
-                                    List<String> replaceList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".replaceWith"));
-                                    if (replaceList.isEmpty()) {
-                                        sender.sendMessage(ChatColor.AQUA + "No replacement messages currently set.");
-                                    }
-                                    for (int i = 0; i < replaceList.size(); i++) {
-                                        int num = i + 1;
-                                        sender.sendMessage(num + ": " + replaceList.get(i));
-                                    }
-                                    break;
-                                case "add":
-                                    List<String> addList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".replaceWith"));
-                                    StringBuilder msg = new StringBuilder();
-                                    for (int i = 3; i < args.length; i++) {
-                                        msg.append(args[i]);
-                                        if (i != args.length - 1) msg.append(" ");
-                                    }
-                                    addList.add(msg.toString());
-                                    this.filterConfig.getConfig().set(args[0].toLowerCase() + ".replaceWith", addList);
-                                    plugin.setFilterConfig(this.filterConfig);
-                                    sender.sendMessage(ChatColor.AQUA + "Added replacement message for " + args[0] + ".");
-                                    break;
-                                case "remove":
-                                    try {
-                                        List<String> removeList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".replaceWith"));
-                                        int num = Integer.parseInt(args[3]) - 1;
-                                        removeList.remove(num);
-                                        this.filterConfig.getConfig().set(args[0].toLowerCase() + ".replaceWith", removeList);
-                                        plugin.setFilterConfig(this.filterConfig);
-                                        sender.sendMessage(ChatColor.AQUA + "Removed replacement message for " + args[0] + ".");
-                                    } catch (Exception e) {
-                                        sender.sendMessage(ChatColor.AQUA + "Please enter the number of the replacement message you want to remove.");
-                                        return true;
-                                    }
-                                    break;
-                                default:
-                                    sender.sendMessage(ChatColor.AQUA + "The possible replace commands are: list, add, and remove.");
-                                    break;
-                            }
-                            break;
-                        default:
-                            sender.sendMessage(ChatColor.AQUA + "The possible options are: on/off, mode, replace, commands, and staff.");
-                            break;
 
-                    }
-                    break;
-                } catch (Exception e) {
-                    sender.sendMessage(ChatColor.AQUA + "Must enter a full command");
-                    return true;
-                }
+//            case "swears": case "slurs":
+//                //TODO implement this with groups instead of just swears/slurs... if cant figure out switch: if (groups.contains(args[0])
+//                try {
+//                    switch (args[1].toLowerCase()) {
+//                        case "on": case "off":
+//                            Boolean filterState = args[1].equalsIgnoreCase("on");
+//                            //TODO fix this switch... its clunky... can just do what i did in mode below instead of switch
+//                            switch (args[0].toLowerCase()) {
+//                                case "swears":
+//                                    this.filterConfig.getConfig().set("groups.swears.enabled", filterState);
+//                                    plugin.setFilterConfig(filterConfig);
+//                                    sender.sendMessage(ChatColor.AQUA + "Swear filter turned " + args[1].toLowerCase() + ".");
+//                                    break;
+//                                case "slurs":
+//                                    this.filterConfig.getConfig().set("groups.slurs.enabled", filterState);
+//                                    plugin.setFilterConfig(filterConfig);
+//                                    sender.sendMessage(ChatColor.AQUA + "Slur filter turned " + args[1].toLowerCase() + ".");
+//                                    break;
+//                                default:
+//                                    sender.sendMessage(ChatColor.AQUA + "The options are: on and off.");
+//                                    break;
+//                            }
+//                            break;
+//                        case "mode":
+//                            if (args[2].equalsIgnoreCase("replace") || args[2].equalsIgnoreCase("censor") || args[2].equalsIgnoreCase("clear")) {
+//                                this.filterConfig.getConfig().set("groups." + args[0].toLowerCase() + ".mode", args[2].toLowerCase());
+//                                plugin.setFilterConfig(filterConfig);
+//                                sender.sendMessage(ChatColor.AQUA + "Filter mode set to " + args[2].toLowerCase() + " for " + args[0].toLowerCase() + ".");
+//                            } else {
+//                                sender.sendMessage(ChatColor.AQUA + "The three selectable modes are: replace, censor, clear.");
+//                            }
+//                            break;
+//                        case "commands":
+//                            switch (args[2].toLowerCase()) {
+//                                case "list":
+//                                    List<String> commandList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".commands"));
+//                                    sender.sendMessage(ChatColor.AQUA + "Filter commands for " + args[0].toLowerCase() + ":");
+//                                    for (int i = 0; i < commandList.size(); i++) {
+//                                        int num = i + 1;
+//                                        sender.sendMessage(num + ": " + commandList.get(i));
+//                                    }
+//                                    break;
+//                                case "add":
+//                                    List<String> commandAddList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".commands"));
+//                                    StringBuilder cmd = new StringBuilder();
+//                                    for (int i = 3; i < args.length; i++) {
+//                                        cmd.append(args[i]);
+//                                        if (i != args.length - 1) cmd.append(" ");
+//                                    }
+//                                    commandAddList.add(cmd.toString());
+//                                    this.filterConfig.getConfig().set(args[0].toLowerCase() + ".commands", commandAddList);
+//                                    plugin.setFilterConfig(this.filterConfig);
+//                                    sender.sendMessage(ChatColor.AQUA + "Added filter command for " + args[0].toLowerCase());
+//                                    break;
+//                                case "remove":
+//                                    try {
+//                                        List<String> commandRemoveList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".commands"));
+//                                        int num = Integer.parseInt(args[3]) - 1;
+//                                        commandRemoveList.remove(num);
+//                                        this.filterConfig.getConfig().set(args[0].toLowerCase() + ".commands", commandRemoveList);
+//                                        plugin.setFilterConfig(this.filterConfig);
+//                                        sender.sendMessage(ChatColor.AQUA + "Removed filter command for " + args[0] + ".");
+//                                    } catch (Exception e) {
+//                                        sender.sendMessage(ChatColor.AQUA + "Please enter the number of the command you want to remove.");
+//                                    }
+//                                    break;
+//                                default:
+//                                    sender.sendMessage(ChatColor.AQUA + "The options for commands are: list, add, and remove..");
+//                                    break;
+//                            }
+//                            break;
+//                        case "staff":
+//                            switch (args[2].toLowerCase()) {
+//                                case "on":
+//                                case "off":
+//                                    Boolean msgState = args[2].equals("on");
+//                                    this.filterConfig.getConfig().set("swears.msgToStaffEnabled", msgState);
+//                                    plugin.setFilterConfig(filterConfig);
+//                                    sender.sendMessage(ChatColor.AQUA + "Staff message for " + args[0].toLowerCase() + " turned " + args[2].toLowerCase() + ".");
+//                                    break;
+//                                case "current":
+//                                    sender.sendMessage(ChatColor.AQUA + "Current staff message for " + args[0].toLowerCase() + ":");
+//                                    sender.sendMessage(Objects.requireNonNull(this.filterConfig.getConfig().getString(args[0].toLowerCase() + ".msgToStaff")));
+//                                    break;
+//                                case "edit":
+//                                    StringBuilder cmd = new StringBuilder();
+//                                    for (int i = 3; i < args.length; i++) {
+//                                        cmd.append(args[i]);
+//                                        if (i != args.length - 1) cmd.append(" ");
+//                                    }
+//                                    this.filterConfig.getConfig().set(args[0].toLowerCase() + ".msgToStaff", cmd.toString());
+//                                    plugin.setFilterConfig(this.filterConfig);
+//                                    sender.sendMessage(ChatColor.AQUA + "Staff message for " + args[0].toLowerCase() + " changed.");
+//                                    break;
+//                                default:
+//                                    sender.sendMessage(ChatColor.AQUA + "The options for staff are: current, edit, and on/off.");
+//                                    break;
+//                            }
+//                            break;
+//                        case "replace":
+//                            switch (args[2].toLowerCase()) {
+//                                case "list":
+//                                    sender.sendMessage(ChatColor.AQUA + "The current replacement messages for " + args[0].toLowerCase() + " are: ");
+//                                    List<String> replaceList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".replaceWith"));
+//                                    if (replaceList.isEmpty()) {
+//                                        sender.sendMessage(ChatColor.AQUA + "No replacement messages currently set.");
+//                                    }
+//                                    for (int i = 0; i < replaceList.size(); i++) {
+//                                        int num = i + 1;
+//                                        sender.sendMessage(num + ": " + replaceList.get(i));
+//                                    }
+//                                    break;
+//                                case "add":
+//                                    List<String> addList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".replaceWith"));
+//                                    StringBuilder msg = new StringBuilder();
+//                                    for (int i = 3; i < args.length; i++) {
+//                                        msg.append(args[i]);
+//                                        if (i != args.length - 1) msg.append(" ");
+//                                    }
+//                                    addList.add(msg.toString());
+//                                    this.filterConfig.getConfig().set(args[0].toLowerCase() + ".replaceWith", addList);
+//                                    plugin.setFilterConfig(this.filterConfig);
+//                                    sender.sendMessage(ChatColor.AQUA + "Added replacement message for " + args[0] + ".");
+//                                    break;
+//                                case "remove":
+//                                    try {
+//                                        List<String> removeList = new ArrayList<>(this.filterConfig.getConfig().getStringList(args[0].toLowerCase() + ".replaceWith"));
+//                                        int num = Integer.parseInt(args[3]) - 1;
+//                                        removeList.remove(num);
+//                                        this.filterConfig.getConfig().set(args[0].toLowerCase() + ".replaceWith", removeList);
+//                                        plugin.setFilterConfig(this.filterConfig);
+//                                        sender.sendMessage(ChatColor.AQUA + "Removed replacement message for " + args[0] + ".");
+//                                    } catch (Exception e) {
+//                                        sender.sendMessage(ChatColor.AQUA + "Please enter the number of the replacement message you want to remove.");
+//                                        return true;
+//                                    }
+//                                    break;
+//                                default:
+//                                    sender.sendMessage(ChatColor.AQUA + "The possible replace commands are: list, add, and remove.");
+//                                    break;
+//                            }
+//                            break;
+//                        default:
+//                            sender.sendMessage(ChatColor.AQUA + "The possible options are: on/off, mode, replace, commands, and staff.");
+//                            break;
+//
+//                    }
+//                    break;
+//                } catch (Exception e) {
+//                    sender.sendMessage(ChatColor.AQUA + "Must enter a full command");
+//                    return true;
+//                }
             default:
+                if (groups.contains(args[0].toLowerCase())) break;
                 sender.sendMessage(ChatColor.AQUA + "The options for the filter command are: on/off, mode, staff, notes, spam, bot, speed, swears/slurs.");
                 sender.sendMessage(ChatColor.AQUA + "Plugin created by Mithraea and DeathsValentine");
                 break;
         }
+        if (groups.contains(args[0].toLowerCase())) {
+            //TODO add history on/off command
+            // add strikes count command
+            // add strikes actions
+            try {
+                switch (args[1].toLowerCase()) {
+                    case "on": case "off":
+                        Boolean filterState = args[1].equalsIgnoreCase("on");
+                        this.filterConfig.getConfig().set("groups." + args[0].toLowerCase() + ".enabled", filterState);
+                        plugin.setFilterConfig(filterConfig);
+                        sender.sendMessage(ChatColor.AQUA + "Filter for " + args[0].toLowerCase() + " turned " + args[1].toLowerCase() + ".");
+                        break;
+                    case "mode":
+                        if (args[2].equalsIgnoreCase("replace") || args[2].equalsIgnoreCase("censor") || args[2].equalsIgnoreCase("clear")) {
+                            this.filterConfig.getConfig().set("groups." + args[0].toLowerCase() + ".mode", args[2].toLowerCase());
+                            plugin.setFilterConfig(filterConfig);
+                            sender.sendMessage(ChatColor.AQUA + "Filter mode set to " + args[2].toLowerCase() + " for " + args[0].toLowerCase() + ".");
+                        } else {
+                            sender.sendMessage(ChatColor.AQUA + "The three selectable modes are: replace, censor, clear.");
+                        }
+                        break;
+                    case "commands":
+                        switch (args[2].toLowerCase()) {
+                            case "list":
+                                List<String> commandList = new ArrayList<>(this.filterConfig.getConfig().getStringList("groups." + args[0].toLowerCase() + ".commands"));
+                                sender.sendMessage(ChatColor.AQUA + "Filter commands for " + args[0].toLowerCase() + ":");
+                                for (int i = 0; i < commandList.size(); i++) {
+                                    int num = i + 1;
+                                    sender.sendMessage(num + ": " + commandList.get(i));
+                                }
+                                break;
+                            case "add":
+                                List<String> commandAddList = new ArrayList<>(this.filterConfig.getConfig().getStringList("groups." + args[0].toLowerCase() + ".commands"));
+                                StringBuilder cmd = new StringBuilder();
+                                for (int i = 3; i < args.length; i++) {
+                                    cmd.append(args[i]);
+                                    if (i != args.length - 1) cmd.append(" ");
+                                }
+                                commandAddList.add(cmd.toString());
+                                this.filterConfig.getConfig().set("groups." + args[0].toLowerCase() + ".commands", commandAddList);
+                                plugin.setFilterConfig(this.filterConfig);
+                                sender.sendMessage(ChatColor.AQUA + "Added filter command for " + args[0].toLowerCase());
+                                break;
+                            case "remove":
+                                try {
+                                    List<String> commandRemoveList = new ArrayList<>(this.filterConfig.getConfig().getStringList("groups." + args[0].toLowerCase() + ".commands"));
+                                    int num = Integer.parseInt(args[3]) - 1;
+                                    commandRemoveList.remove(num);
+                                    this.filterConfig.getConfig().set("groups." + args[0].toLowerCase() + ".commands", commandRemoveList);
+                                    plugin.setFilterConfig(this.filterConfig);
+                                    sender.sendMessage(ChatColor.AQUA + "Removed filter command for " + args[0] + ".");
+                                } catch (Exception e) {
+                                    sender.sendMessage(ChatColor.AQUA + "Please enter the number of the command you want to remove.");
+                                }
+                                break;
+                            default:
+                                sender.sendMessage(ChatColor.AQUA + "The options for commands are: list, add, and remove..");
+                                break;
+                        }
+                        break;
+                    case "staff":
+                        switch (args[2].toLowerCase()) {
+                            case "on":
+                            case "off":
+                                Boolean msgState = args[2].equals("on");
+                                this.filterConfig.getConfig().set("groups." + args[0] + ".msgToStaffEnabled", msgState);
+                                plugin.setFilterConfig(filterConfig);
+                                sender.sendMessage(ChatColor.AQUA + "Staff message for " + args[0].toLowerCase() + " turned " + args[2].toLowerCase() + ".");
+                                break;
+                            case "current":
+                                sender.sendMessage(ChatColor.AQUA + "Current staff message for " + args[0].toLowerCase() + ":");
+                                sender.sendMessage(Objects.requireNonNull(this.filterConfig.getConfig().getString("groups." + args[0].toLowerCase() + ".msgToStaff")));
+                                break;
+                            case "edit":
+                                StringBuilder cmd = new StringBuilder();
+                                for (int i = 3; i < args.length; i++) {
+                                    cmd.append(args[i]);
+                                    if (i != args.length - 1) cmd.append(" ");
+                                }
+                                this.filterConfig.getConfig().set("groups." + args[0].toLowerCase() + ".msgToStaff", cmd.toString());
+                                plugin.setFilterConfig(this.filterConfig);
+                                sender.sendMessage(ChatColor.AQUA + "Staff message for " + args[0].toLowerCase() + " changed.");
+                                break;
+                            default:
+                                sender.sendMessage(ChatColor.AQUA + "The options for staff are: current, edit, and on/off.");
+                                break;
+                        }
+                        break;
+                    case "replace":
+                        switch (args[2].toLowerCase()) {
+                            case "list":
+                                sender.sendMessage(ChatColor.AQUA + "The current replacement messages for " + args[0].toLowerCase() + " are: ");
+                                List<String> replaceList = new ArrayList<>(this.filterConfig.getConfig().getStringList("groups." + args[0].toLowerCase() + ".replaceWith"));
+                                if (replaceList.isEmpty()) {
+                                    sender.sendMessage(ChatColor.AQUA + "No replacement messages currently set.");
+                                }
+                                for (int i = 0; i < replaceList.size(); i++) {
+                                    int num = i + 1;
+                                    sender.sendMessage(num + ": " + replaceList.get(i));
+                                }
+                                break;
+                            case "add":
+                                List<String> addList = new ArrayList<>(this.filterConfig.getConfig().getStringList("groups." + args[0].toLowerCase() + ".replaceWith"));
+                                StringBuilder msg = new StringBuilder();
+                                for (int i = 3; i < args.length; i++) {
+                                    msg.append(args[i]);
+                                    if (i != args.length - 1) msg.append(" ");
+                                }
+                                addList.add(msg.toString());
+                                this.filterConfig.getConfig().set("groups." + args[0].toLowerCase() + ".replaceWith", addList);
+                                plugin.setFilterConfig(this.filterConfig);
+                                sender.sendMessage(ChatColor.AQUA + "Added replacement message for " + args[0] + ".");
+                                break;
+                            case "remove":
+                                try {
+                                    List<String> removeList = new ArrayList<>(this.filterConfig.getConfig().getStringList("groups." + args[0].toLowerCase() + ".replaceWith"));
+                                    int num = Integer.parseInt(args[3]) - 1;
+                                    removeList.remove(num);
+                                    this.filterConfig.getConfig().set("groups." + args[0].toLowerCase() + ".replaceWith", removeList);
+                                    plugin.setFilterConfig(this.filterConfig);
+                                    sender.sendMessage(ChatColor.AQUA + "Removed replacement message for " + args[0] + ".");
+                                } catch (Exception e) {
+                                    sender.sendMessage(ChatColor.AQUA + "Please enter the number of the replacement message you want to remove.");
+                                    return true;
+                                }
+                                break;
+                            default:
+                                sender.sendMessage(ChatColor.AQUA + "The possible replace commands are: list, add, and remove.");
+                                break;
+                        }
+                        break;
+                    default:
+                        sender.sendMessage(ChatColor.AQUA + "The possible options are: on/off, mode, replace, commands, and staff.");
+                        break;
+
+                }
+            } catch (Exception e) {
+                sender.sendMessage(ChatColor.AQUA + "Must enter a full command");
+                return true;
+            }
+        }
+
 //        if (args[0].equalsIgnoreCase("on") || args[0].equalsIgnoreCase("off")) {
 //            Boolean state = args[0].equals("on");
 //            this.filterConfig.getConfig().set("swears.enabled", state);

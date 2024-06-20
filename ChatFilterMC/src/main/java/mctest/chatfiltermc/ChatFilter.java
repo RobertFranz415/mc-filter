@@ -1,21 +1,14 @@
 package mctest.chatfiltermc;
 
-import jdk.tools.jlink.plugin.Plugin;
 import mctest.chatfiltermc.util.ConfigUtil;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-import org.bukkit.event.Cancellable;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
-import org.bukkit.event.player.PlayerChatEvent;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scheduler.BukkitScheduler;
 
-import javax.print.attribute.standard.Severity;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -27,68 +20,32 @@ public class ChatFilter implements Listener {
     private List<String> slurList = new ArrayList<>();
     private final HashMap<UUID, Integer> spamMap = new HashMap<>();
     private final HashMap<UUID, Date> lastMsgMap = new HashMap<>();
+    private final List<String> groups;
 
     public ChatFilter(ChatFilterMC plugin) {
         Bukkit.getPluginManager().registerEvents(this, plugin);
         this.plugin = plugin;
         this.setConfigs();
-
+        this.groups = plugin.getGroupList();
     }
 
     //TODO
     // Clean up/modularize code
     // If new entry: make strikes come first in yaml file
-    public void handleSlurs(UUID uuid, String msg) {
-        this.historyConfig = plugin.getHistoryConfig();
-        List<String> slurCommands = filterConfig.getConfig().getStringList("slurs.commands");
-        for (String command : slurCommands) {
-            command = this.setCommand(command, uuid, msg);
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-        }
-
-        if (this.filterConfig.getConfig().getBoolean("slurs.msgToStaffEnabled")) {
-            String msgToStaff = this.filterConfig.getConfig().getString("slurs.msgToStaff");
-            if (msgToStaff.contains("[senderName]")) {
-                msgToStaff = msgToStaff.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
-            }
-            Bukkit.broadcast(ChatColor.RED + msgToStaff, "filter");
-        }
-
-        //TODO
-        // might need to do plain ol if-statement instead of ternary if going to init more than just count
-        // messages separate from notes?
-        if (this.filterConfig.getConfig().getBoolean("slurs.history")) {
-            this.setHistory(uuid, msg, "slurs");
-//                int cnt = !historyConfig.getConfig().contains(uuid + ".slurs.count") ? 1 : historyConfig.getConfig().getInt(uuid + ".slurs.count")+1;
-//                this.historyConfig.getConfig().set(uuid + ".slurs.count", cnt);
-//                plugin.setHistoryConfig(this.historyConfig);
-//
-//                int maxStrikes = this.filterConfig.getConfig().getInt("slurs.maxStrikes");
-//                if (cnt >= maxStrikes && maxStrikes != -1) {
-//                    List<String> actions = filterConfig.getConfig().getStringList("slurs.strikeActions");
-//                    for (String command : actions) {
-//                        this.setCommand(command, uuid, msg);
-//                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-//                    }
-//                }
-        }
-        //So that the config will update if any commands update the history
-        plugin.setHistoryConfig(this.historyConfig);
-    }
-
-    public void handleSwears(UUID uuid, String msg) {
+    // messages separate from notes (?)
+    private void handleActions(UUID uuid, String tier, String msg) {
         this.historyConfig = plugin.getHistoryConfig();
 
         // Commands
-        List<String> swearCommands = filterConfig.getConfig().getStringList("swears.commands");
+        List<String> swearCommands = filterConfig.getConfig().getStringList("groups." + tier + ".commands");
         for (String command : swearCommands) {
             command = this.setCommand(command, uuid, msg);
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
         }
 
         // Message to staff
-        if (this.filterConfig.getConfig().getBoolean("swears.msgToStaffEnabled")) {
-            String msgToStaff = this.filterConfig.getConfig().getString("swears.msgToStaff");
+        if (this.filterConfig.getConfig().getBoolean("groups." + tier + ".msgToStaffEnabled")) {
+            String msgToStaff = this.filterConfig.getConfig().getString("groups." + tier + ".msgToStaff");
             if (msgToStaff.contains("[senderName]")) {
                 msgToStaff = msgToStaff.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
             }
@@ -97,33 +54,22 @@ public class ChatFilter implements Listener {
         }
 
         // History
-        if (this.filterConfig.getConfig().getBoolean("swears.history")) {
-            this.setHistory(uuid, msg, "swears");
-//            int cnt = !historyConfig.getConfig().contains(uuid + ".swears.count") ? 1 : historyConfig.getConfig().getInt(uuid + ".swears.count")+1;
-//            this.historyConfig.getConfig().set(uuid + ".swears.count", cnt);
-//            plugin.setHistoryConfig(this.historyConfig);
-//
-//            int maxStrikes = this.filterConfig.getConfig().getInt("swears.maxStrikes");
-//            if (cnt >= maxStrikes && maxStrikes != -1) {
-//                List<String> actions = filterConfig.getConfig().getStringList("swears.strikeActions");
-//                for (String command : actions) {
-//                    this.setCommand(command, uuid, msg);
-//                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-//                }
-//            }
+        if (this.filterConfig.getConfig().getBoolean("groups." + tier + ".history")) {
+            this.setHistory(uuid, msg, tier);
         }
         //So that the config will update if any commands update the history
         plugin.setHistoryConfig(this.historyConfig);
     }
 
+    //TODO Possibly pass through foundMap to be able to increment all counts instead of just highest tier
     private void setHistory(UUID uuid, String msg, String tier) {
         int cnt = !historyConfig.getConfig().contains(uuid + "." + tier + ".count") ? 1 : historyConfig.getConfig().getInt(uuid + "." + tier + ".count") + 1;
         this.historyConfig.getConfig().set(uuid + "." + tier + ".count", cnt);
         plugin.setHistoryConfig(this.historyConfig);
 
-        int maxStrikes = this.filterConfig.getConfig().getInt(tier + ".maxStrikes");
+        int maxStrikes = this.filterConfig.getConfig().getInt("groups." + tier + ".maxStrikes");
         if (cnt >= maxStrikes && maxStrikes != -1) {
-            List<String> actions = filterConfig.getConfig().getStringList(tier + ".strikeActions");
+            List<String> actions = filterConfig.getConfig().getStringList("groups." + tier + ".strikeActions");
             for (String command : actions) {
                 this.setCommand(command, uuid, msg);
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
@@ -212,14 +158,22 @@ public class ChatFilter implements Listener {
             }
         }
     }
-
+    //TODO create hierarchy option or just keep order = hierarchy?
     @EventHandler(priority = EventPriority.LOWEST)
     private void onPlayerChatEvent(AsyncPlayerChatEvent event) {
         //TODO Uncomment this
 //        if (event.getPlayer().isOp() || event.getPlayer().hasPermission("filter.exception")) return;
-        if (!this.filterConfig.getConfig().getBoolean("slurs.enabled") && !this.filterConfig.getConfig().getBoolean("swears.enabled")) {
+        //TODO Test with more tiers
+        List<String> enabled = new ArrayList<>();
+        for (String tier : this.groups) {
+            if (this.filterConfig.getConfig().getBoolean("groups." + tier + ".enabled")) {
+                enabled.add(tier);
+            }
+        }
+        if (enabled.isEmpty()) {
             return;
         }
+
         UUID uuid = event.getPlayer().getUniqueId();
 
         String message = event.getMessage().toLowerCase();
@@ -228,27 +182,20 @@ public class ChatFilter implements Listener {
         // Using these booleans instead of implementing actions when found so that
         // actions do not trigger multiple times and so that slurs will have a higher priority
         // IE: "blah swear blah slur, slur" will only trigger the slur handler and only once
-        boolean slurFound = false;
-        boolean swearFound = false;
+        HashMap<String, Boolean> foundMap = new HashMap<>();
+        for (String tier : enabled) {
+            foundMap.put(tier, false);
+        }
 
         for (int i = 0; i < msg.length; i++) {
-            if (this.filterConfig.getConfig().getBoolean("slurs.enabled")) {
-                for (String rex : this.slurList) {
+            for (String tier : enabled) {
+                //TODO This is triggering for every word
+                for (String rex : this.filterConfig.getConfig().getStringList("groups." + tier + ".regex")) {
                     if (msg[i].toLowerCase().matches(rex)) {
-                        slurFound = true;
+                        Bukkit.getLogger().info("Tier: " + tier + "  > " + msg[i]);
+                        foundMap.put(tier, true);
                         //TODO if() statement not necessary, not sure how/if effects efficiency
-                        if (Objects.equals(this.filterConfig.getConfig().getString("slurs.mode"), "censor")) {
-                            msg[i] = "****";
-                        }
-                    }
-                }
-            }
-            if (this.filterConfig.getConfig().getBoolean("swears.enabled")) {
-                for (String rex : this.swearList) {
-                    if (msg[i].toLowerCase().matches(rex)) {
-                        swearFound = true;
-
-                        if (Objects.equals(this.filterConfig.getConfig().getString("swears.mode"), "censor")) {
+                        if (Objects.equals(this.filterConfig.getConfig().getString("groups." + tier + ".mode"), "censor")) {
                             msg[i] = "****";
                         }
                     }
@@ -256,62 +203,45 @@ public class ChatFilter implements Listener {
             }
         }
 
-        if (slurFound) {
-            // Need BukkitRunnable to run handlers since this event is Async
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    handleSlurs(uuid, message);
-                }
-            }.runTask(this.plugin);
+        Bukkit.getLogger().info(foundMap.toString());
 
-            switch (Objects.requireNonNull(this.filterConfig.getConfig().getString("slurs.mode"))) {
-                case "censor":
-                    String clean = String.join(" ", msg);;
-                    event.setMessage(clean);
-                    break;
-                case "replace":
-                    List<String> replaceList = new ArrayList<>(this.filterConfig.getConfig().getStringList("slurs.replaceWith"));
-                    if (replaceList.isEmpty()) {
-                        event.setCancelled(true);
+        for (String tier : enabled) {
+            if (foundMap.get(tier)) {
+                // Need BukkitRunnable to run handlers since this event is Async
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        handleActions(uuid, tier, message);
                     }
-                    Random random = new Random();
-                    int num = random.nextInt(replaceList.size());
-                    event.setMessage(Objects.requireNonNull(replaceList.get(num)));
-                    break;
-                case "clear":
-                    event.setCancelled(true);
-                    break;
-                default:
-                    break;
-            }
-        } else if (swearFound) {
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    handleSwears(uuid, message);
+                }.runTask(this.plugin);
+                String mode = Objects.requireNonNull(this.filterConfig.getConfig().getString("groups." + tier + ".mode"));
+                switch (mode) {
+                    case "censor":
+                        String clean = String.join(" ", msg);
+                        ;
+                        event.setMessage(clean);
+                        break;
+                    case "replace":
+                        String rep = "groups." + tier + ".replaceWith";
+                        List<String> replaceList = new ArrayList<>(this.filterConfig.getConfig().getStringList(rep));
+                        if (replaceList.isEmpty()) {
+                            event.setCancelled(true);
+                        }
+                        try {
+                            Random random = new Random();
+                            int num = random.nextInt(replaceList.size());
+                            event.setMessage(Objects.requireNonNull(replaceList.get(num)));
+                        } catch (Exception e) {
+                            Bukkit.getLogger().info("Replace list empty!");
+                        }
+                        break;
+                    case "clear":
+                        event.setCancelled(true);
+                        break;
+                    default:
+                        break;
                 }
-            }.runTask(this.plugin);
-
-            switch (Objects.requireNonNull(this.filterConfig.getConfig().getString("swears.mode"))) {
-                case "censor":
-                    String clean = String.join(" ", msg);;
-                    event.setMessage(clean);
-                    break;
-                case "replace":
-                    List<String> replaceList = new ArrayList<>(this.filterConfig.getConfig().getStringList("swears.replaceWith"));
-                    if (replaceList.isEmpty()) {
-                        event.setCancelled(true);
-                    }
-                    Random random = new Random();
-                    int num = random.nextInt(replaceList.size());
-                    event.setMessage(Objects.requireNonNull(replaceList.get(num)));
-                    break;
-                case "clear":
-                    event.setCancelled(true);
-                    break;
-                default:
-                    break;
+                return;
             }
         }
     }
@@ -319,8 +249,5 @@ public class ChatFilter implements Listener {
     public void setConfigs(){
         this.filterConfig = this.plugin.getFilterConfig();
         this.historyConfig = this.plugin.getHistoryConfig();
-
-        this.swearList = this.filterConfig.getConfig().getStringList("swears.regex");
-        this.slurList = this.filterConfig.getConfig().getStringList("slurs.regex");
     }
 }

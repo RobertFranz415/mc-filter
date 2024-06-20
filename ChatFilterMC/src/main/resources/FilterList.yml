@@ -15,44 +15,64 @@
 # strikeActions: commands automatically run when maxStrikes is reached by a player
 # to disable max strike: set to -1
 
-swears:
-  enabled: true
-  partialMatches: false
-  mode: censor
-  replaceWith:
-    - I have poor vocabulary
-    - I am an adult!
-  msgToStaff: '[senderName] is trying to swear.'
-  msgToStaffEnabled: true
-  commands:
-    - msg [senderName] Don't swear.
-    - filter notes add [senderName] [date] [msg]
-  history: true
-  maxStrikes: 100
-  strikeActions:
-    - msg [senderName] That's it buddy!
-  regex:
-    - ^.*(f|ƒ|£|🇫|ẝ|ꞙ|ꬵ|🅕)+\s*(u|v|🇺|ʋ|υ|ս|ᴜ|ꞟ|ꭎ|ꭒ|𑣘|ט|𑜆|🅤)?+\s*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(k|\|<|🇰|🅚)+.*$
+groups:
+  slurs:
+    enabled: true
+    partialMatches: false
+    mode: replace
+    replaceWith:
+      - I use slurs as a replacement of actual humor so that if anyone calls me out I can call them triggered instead of having any self-reflection.
+      - I am stuck in my edgy phase
+    msgToStaff: '[senderName] tried to use a slur!'
+    msgToStaffEnabled: true
+    commands:
+      - msg [senderName] Stop being an edgy little kid.  You're not funny, you're just
+        pathetic.
+      - filter notes add [senderName] [date] [msg]
+    history: true
+    maxStrikes: 100
+    strikeActions:
+      - msg [senderName] That's it buddy!
+    regex:
+      - ^.*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(r|🇷|®️|г|ᴦ|ⲅ|ꭇ|ꭈ|ꮁ|🅡)+\s*(a|4|@|∆|/-\\|/_\\|Д|🇦|🅰️|ɑ|а|🅐)?+\s*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(k|\|<|🇰|🅚)+\s*(e|3|£|🇪|е|ҽ|ꬲ|🅔)?+\s*(r|🇷|®️|г|ᴦ|ⲅ|ꭇ|ꭈ|ꮁ|🅡)+.*$
 
-slurs:
-  enabled: true
-  partialMatches: false
-  mode: replace
-  replaceWith:
-    - I use slurs as a replacement of actual humor so that if anyone calls me out I can call them triggered instead of having any self-reflection.
-    - I am stuck in my edgy phase
-  msgToStaff: '[senderName] tried to use a slur!'
-  msgToStaffEnabled: true
-  commands:
-    - msg [senderName] Stop being an edgy little kid.  You're not funny, you're just
-      pathetic.
-    - filter notes add [senderName] [date] [msg]
-  history: true
-  maxStrikes: 100
-  strikeActions:
-    - msg [senderName] That's it buddy!
-  regex:
-    - ^.*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(r|🇷|®️|г|ᴦ|ⲅ|ꭇ|ꭈ|ꮁ|🅡)+\s*(a|4|@|∆|/-\\|/_\\|Д|🇦|🅰️|ɑ|а|🅐)?+\s*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(k|\|<|🇰|🅚)+\s*(e|3|£|🇪|е|ҽ|ꬲ|🅔)?+\s*(r|🇷|®️|г|ᴦ|ⲅ|ꭇ|ꭈ|ꮁ|🅡)+.*$
+  swears:
+    enabled: true
+    partialMatches: false
+    mode: censor
+    replaceWith:
+      - I have poor vocabulary
+      - I am an adult!
+    msgToStaff: '[senderName] is trying to swear.'
+    msgToStaffEnabled: true
+    commands:
+      - msg [senderName] Don't swear.
+      - filter notes add [senderName] [date] [msg]
+    history: true
+    maxStrikes: 100
+    strikeActions:
+      - msg [senderName] That's it buddy!
+    regex:
+      - ^.*(f|ƒ|£|🇫|ẝ|ꞙ|ꬵ|🅕)+\s*(u|v|🇺|ʋ|υ|ս|ᴜ|ꞟ|ꭎ|ꭒ|𑣘|ט|𑜆|🅤)?+\s*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(k|\|<|🇰|🅚)+.*$
+
+  annoy:
+    enabled: true
+    partialMatches: false
+    mode: replace
+    replaceWith:
+      - I am annoying
+      - I am an child!
+    msgToStaff: '[senderName] is being annoying.'
+    msgToStaffEnabled: true
+    commands:
+      - msg [senderName] Don't be annoying.
+      - filter notes add [senderName] [date] [msg]
+    history: true
+    maxStrikes: 100
+    strikeActions:
+      - msg [senderName] Stop it buddy!
+    regex:
+      - ^.*(f|ƒ|£|🇫|ẝ|ꞙ|ꬵ|🅕)+\s*(u|v|🇺|ʋ|υ|ս|ᴜ|ꞟ|ꭎ|ꭒ|𑣘|ט|𑜆|🅤)?+\s*(c|€|🇨|©️|ϲ|с|ᴄ|ⲥ|ꮯ|🅒)+\s*(k|\|<|🇰|🅚)+.*$
 
 # Triggers spam filter if person enters 'numberToTrigger' messages in 'timeAllotted'
 spam:

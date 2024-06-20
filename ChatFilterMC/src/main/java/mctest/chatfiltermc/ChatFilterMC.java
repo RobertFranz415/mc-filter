@@ -4,9 +4,8 @@ import mctest.chatfiltermc.commands.Filter;
 import mctest.chatfiltermc.util.ConfigUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.Objects;
+import java.util.*;
 
 public final class ChatFilterMC extends JavaPlugin {
     private ConfigUtil filterConfig;
@@ -15,6 +14,7 @@ public final class ChatFilterMC extends JavaPlugin {
     private ConfigUtil wordList;
     private RegexBuilder regexBuilder;
     private ChatFilter chatFilter;
+    private List<String> groupList;
     @Override
     public void onEnable() {
         // Plugin startup logic
@@ -32,24 +32,33 @@ public final class ChatFilterMC extends JavaPlugin {
         this.wordList = new ConfigUtil(this, "WordList.yml");
         this.wordList.save();
 
+        this.initGroupList();
+
         Objects.requireNonNull(getCommand("filter")).setExecutor(new Filter(this));
         this.chatFilter = new ChatFilter(this);
         this.regexBuilder = new RegexBuilder(this);
 
         try{
-            this.regexBuilder.buildRegex("swears");
-            this.regexBuilder.buildRegex("slurs");
+            for (String tier : this.getGroupList()) {
+                this.regexBuilder.buildRegex(tier);
+            }
+//            this.regexBuilder.buildRegex("swears");
+//            this.regexBuilder.buildRegex("slurs");
 //            this.regexBuilder.buildSwearRegex();
 //            this.regexBuilder.buildSlurRegex();
         }catch (OutOfMemoryError e){
             Bukkit.getLogger().info("Out of memory. Attempting to try again once server is finished starting up.");
             Bukkit.getScheduler().runTaskLater(this, () -> {
-                this.regexBuilder.buildRegex("swears");
-                this.regexBuilder.buildRegex("slurs");
+                for (String tier : this.getGroupList()) {
+                    this.regexBuilder.buildRegex(tier);
+                }
+//                this.regexBuilder.buildRegex("swears");
+//                this.regexBuilder.buildRegex("slurs");
 //                this.regexBuilder.buildSwearRegex();
 //                this.regexBuilder.buildSlurRegex();
             }, 1);
         }
+
     }
 
     public ConfigUtil getFilterConfig() {
@@ -94,6 +103,20 @@ public final class ChatFilterMC extends JavaPlugin {
 
         this.regexBuilder.setConfigs();
         this.chatFilter.setConfigs();
+    }
+
+    private void initGroupList() {
+        try {
+            this.groupList = new ArrayList<>(Objects.requireNonNull(this.getFilterConfig().getConfig().getConfigurationSection("groups")).getKeys(false));
+        } catch (Exception e) {
+            Bukkit.getLogger().info("Filter groups empty!");
+        }
+    }
+    public void setGroupList(List<String> groupList) {
+        this.groupList = groupList;
+    }
+    public List<String> getGroupList() {
+        return this.groupList;
     }
 
     @Override
