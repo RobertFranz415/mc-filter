@@ -97,20 +97,40 @@ public final class ChatFilterMC extends JavaPlugin {
         this.chatFilter.setConfigs();
     }
 
-    private void initGroupList() {
+    public void initGroupList() {
         try {
             List<String> unordered = new ArrayList<>(Objects.requireNonNull(this.getFilterConfig().getConfig().getConfigurationSection("groups")).getKeys(false));
             this.groupList = new ArrayList<>(Collections.nCopies(unordered.size(), null));
-            for (String group : unordered) {
-                int level = this.getFilterConfig().getConfig().getInt("groups." + group + ".level") - 1;
-                this.groupList.set(level, group);
+            for (int i = 0; i < unordered.size(); i++) {
+                if (this.getFilterConfig().getConfig().getInt("groups." + unordered.get(i) + ".level") > unordered.size()) {
+                    this.getFilterConfig().getConfig().set("groups." + unordered.get(i) + ".level", unordered.size());
+                    this.filterConfig.save();
+                }
+                int level = this.getFilterConfig().getConfig().getInt("groups." + unordered.get(i) + ".level") - 1;
+                if (this.groupList.get(level) == null) {
+                    this.groupList.set(level, unordered.get(i));
+                    unordered.set(i, null);
+                }
+            }
+            for (int i = 0; i < unordered.size(); i++) {
+                if (unordered.get(i) != null) {
+                    int j = i;
+                    while (this.groupList.get(j) != null) {
+                        if (++j >= unordered.size()) {
+                            j = 0;
+                        }
+                    }
+                    this.groupList.set(j, unordered.get(i));
+                    unordered.set(i, null);
+                }
             }
         } catch (Exception e) {
-            Bukkit.getLogger().info("Filter groups empty!");
+            Bukkit.getLogger().info("Error setting up filter groups list!");
         }
     }
     public void setGroupList(List<String> groupList) {
         this.groupList = groupList;
+        this.initGroupList();
     }
     public List<String> getGroupList() {
         return this.groupList;

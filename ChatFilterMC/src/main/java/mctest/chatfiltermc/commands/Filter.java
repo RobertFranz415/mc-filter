@@ -249,13 +249,65 @@ public class Filter implements Listener, CommandExecutor {
                 if (Objects.equals(args[1].toLowerCase(), "normal") || Objects.equals(args[1].toLowerCase(), "chill") || Objects.equals(args[1].toLowerCase(), "slow") || Objects.equals(args[1].toLowerCase(), "ice")) {
                     this.filterConfig.getConfig().set("chatSpeed.mode", args[1].toLowerCase());
                     this.filterConfig.save();
-                    plugin.setFilterConfig(filterConfig);
+                    plugin.setFilterConfig(this.filterConfig);
                     sender.sendMessage(ChatColor.AQUA + "Chat speed set to " + args[1].toLowerCase());
                 } else {
                     sender.sendMessage(ChatColor.AQUA + "The options are: normal, chill, slow, ice..");
                 }
                 break;
+            case "create":
+                if (args.length < 2) {
+                    sender.sendMessage(ChatColor.AQUA + "Must enter a name for the new filter group.");
+                    return true;
+                } else if (args.length > 2) {
+                    sender.sendMessage(ChatColor.AQUA + "Must only enter the name of the new filter group.");
+                    return true;
+                }
 
+                String group = "groups." + args[1].toLowerCase() + ".";
+                this.filterConfig.getConfig().set(group + "enabled", false);
+                //TODO get the lowest level
+                // add this new group to groups list
+                this.filterConfig.getConfig().set(group + "level", plugin.getGroupList().size() + 1);
+                this.filterConfig.getConfig().set(group + "partialMatches", false);
+                this.filterConfig.getConfig().set(group + "mode", "replace");
+                this.filterConfig.getConfig().set(group + "replaceWith", new ArrayList<>());
+                this.filterConfig.getConfig().set(group + "msgToStaff", "[senderName] triggered " + args[1].toLowerCase() + " filter.");
+                this.filterConfig.getConfig().set(group + "msgToStaffEnabled", false);
+                this.filterConfig.getConfig().set(group + "commands", new ArrayList<>());
+                this.filterConfig.getConfig().set(group + "history", false);
+                this.filterConfig.getConfig().set(group + "maxStrikes", -1);
+                this.filterConfig.getConfig().set(group + "strikeActions", new ArrayList<>());
+                this.filterConfig.getConfig().set(group + "regex", new ArrayList<>());
+
+                this.filterConfig.save();
+                plugin.setFilterConfig(this.filterConfig);
+
+                plugin.initGroupList();
+                sender.sendMessage(ChatColor.AQUA + "New filter group " + args[1].toLowerCase() + " created!  Now to edit the options.");
+
+                break;
+            case "remove":
+                if (args.length < 2) {
+                    sender.sendMessage(ChatColor.AQUA + "Must enter a name for the new filter group.");
+                    return true;
+                } else if (args.length > 2) {
+                    sender.sendMessage(ChatColor.AQUA + "Must only enter the name of the new filter group.");
+                    return true;
+                }
+                if (this.filterConfig.getConfig().contains("groups." + args[1].toLowerCase())) {
+                    Bukkit.getLogger().info("Exists... for now...");
+                    this.filterConfig.getConfig().set("groups." + args[1].toLowerCase(), null);
+                    this.filterConfig.save();
+                    plugin.setFilterConfig(this.filterConfig);
+
+                    plugin.initGroupList();
+                    sender.sendMessage(ChatColor.AQUA + "Filter group " + args[1].toLowerCase() + " removed.");
+                } else {
+                    sender.sendMessage(ChatColor.AQUA + "Not a valid filter group.");
+                }
+
+                break;
 //            case "swears": case "slurs":
 //                //TODO implement this with groups instead of just swears/slurs... if cant figure out switch: if (groups.contains(args[0])
 //                try {
