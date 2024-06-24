@@ -9,7 +9,7 @@
 # replace: replaces filtered message with 'replaceWith'
 # clear: message is not sent at all
 
-# msgToStaff: sends this message to all online admins if enabled
+# msgToAdmin: sends this message to all online admins if enabled
 # commands: commands which run after a filtered word was detected
 # history saves filtered messages to notes
 # strikeActions: commands automatically run when maxStrikes is reached by a player
@@ -24,8 +24,8 @@ groups:
     replaceWith:
       - I use slurs as a replacement of actual humor so that if anyone calls me out I can call them triggered instead of having any self-reflection.
       - I am stuck in my edgy phase
-    msgToStaff: '[senderName] tried to use a slur!'
-    msgToStaffEnabled: true
+    msgToAdmin: '[senderName] tried to use a slur!'
+    msgToAdminEnabled: true
     commands:
       - msg [senderName] Stop being an edgy little kid.  You're not funny, you're just
         pathetic.
@@ -45,8 +45,8 @@ groups:
     replaceWith:
       - I have poor vocabulary
       - I am an adult!
-    msgToStaff: '[senderName] is trying to swear.'
-    msgToStaffEnabled: true
+    msgToAdmin: '[senderName] is trying to swear.'
+    msgToAdminEnabled: true
     commands:
       - msg [senderName] Don't swear.
       - filter notes add [senderName] [date] [msg]
@@ -65,8 +65,8 @@ groups:
     replaceWith:
       - I am annoying
       - I am an child!
-    msgToStaff: '[senderName] is being annoying.'
-    msgToStaffEnabled: true
+    msgToAdmin: '[senderName] is being annoying.'
+    msgToAdminEnabled: true
     commands:
       - msg [senderName] Don't be annoying.
       - filter notes add [senderName] [date] [msg]
@@ -85,8 +85,8 @@ groups:
       replaceWith:
         - I am cringe
         - I am a cringe child!
-      msgToStaff: '[senderName] is being cringe.'
-      msgToStaffEnabled: true
+      msgToAdmin: '[senderName] is being cringe.'
+      msgToAdminEnabled: true
       commands:
         - msg [senderName] Don't be cringe.
         - filter notes add [senderName] [date] [msg]
@@ -102,6 +102,8 @@ spam:
   enabled: true
   numberToTrigger: 3
   timeAllotted: 5
+  commands:
+    - msg [senderName] Stop spamming messages!
 
 # Modes: normal (off), chill, slow, ice
 # Time is in seconds for time in between messages
@@ -120,3 +122,5 @@ chatSpeed:
 bot:
   enabled: true
   time: 400
+  commands:
+    - msg [senderName] Sop spamming, bot!

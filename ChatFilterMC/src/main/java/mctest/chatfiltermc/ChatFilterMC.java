@@ -15,6 +15,7 @@ public final class ChatFilterMC extends JavaPlugin {
     private RegexBuilder regexBuilder;
     private ChatFilter chatFilter;
     private List<String> groupList;
+    private HashMap<UUID, Long> timeoutMap = new HashMap<>();
     @Override
     public void onEnable() {
         // Plugin startup logic
@@ -50,7 +51,6 @@ public final class ChatFilterMC extends JavaPlugin {
                 }
             }, 1);
         }
-
     }
 
     public ConfigUtil getFilterConfig() {
@@ -101,6 +101,7 @@ public final class ChatFilterMC extends JavaPlugin {
         try {
             List<String> unordered = new ArrayList<>(Objects.requireNonNull(this.getFilterConfig().getConfig().getConfigurationSection("groups")).getKeys(false));
             this.groupList = new ArrayList<>(Collections.nCopies(unordered.size(), null));
+            // First insert the groups into the correct position.  If a group's level is already taken move on.
             for (int i = 0; i < unordered.size(); i++) {
                 if (this.getFilterConfig().getConfig().getInt("groups." + unordered.get(i) + ".level") > unordered.size()) {
                     this.getFilterConfig().getConfig().set("groups." + unordered.get(i) + ".level", unordered.size());
@@ -112,9 +113,10 @@ public final class ChatFilterMC extends JavaPlugin {
                     unordered.set(i, null);
                 }
             }
+            // Insert any remaining groups into the empty positions
             for (int i = 0; i < unordered.size(); i++) {
                 if (unordered.get(i) != null) {
-                    int j = i;
+                    int j = 0;
                     while (this.groupList.get(j) != null) {
                         if (++j >= unordered.size()) {
                             j = 0;
@@ -134,6 +136,14 @@ public final class ChatFilterMC extends JavaPlugin {
     }
     public List<String> getGroupList() {
         return this.groupList;
+    }
+
+    public void setTimeoutMap(HashMap<UUID, Long> map) {
+        this.timeoutMap = map;
+    }
+
+    public HashMap<UUID, Long> getTimeoutMap() {
+        return this.timeoutMap;
     }
 
     @Override

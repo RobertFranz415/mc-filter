@@ -16,8 +16,6 @@ public class ChatFilter implements Listener {
     private final ChatFilterMC plugin;
     private ConfigUtil filterConfig;
     private ConfigUtil historyConfig;
-    private List<String> swearList = new ArrayList<>();
-    private List<String> slurList = new ArrayList<>();
     private final HashMap<UUID, Integer> spamMap = new HashMap<>();
     private final HashMap<UUID, Date> lastMsgMap = new HashMap<>();
     private final List<String> groups;
@@ -30,8 +28,6 @@ public class ChatFilter implements Listener {
     }
 
     //TODO
-    // Clean up/modularize code
-    // If new entry: make strikes come first in yaml file
     // messages separate from notes (?)
     private void handleActions(UUID uuid, String tier, String msg) {
         this.historyConfig = plugin.getHistoryConfig();
@@ -96,10 +92,32 @@ public class ChatFilter implements Listener {
     }
 
     @EventHandler
+    private void timeoutCheck(AsyncPlayerChatEvent event) {
+        if (!plugin.getTimeoutMap().containsKey(event.getPlayer().getUniqueId())) return;
+
+        Date date = new Date();
+        long now = date.getTime();
+        long dif = (plugin.getTimeoutMap().get(event.getPlayer().getUniqueId()) - now) / 1000;
+
+        if (dif > 0) {
+            if (dif > 60) {
+                long min = dif / 60;
+                long sec = dif % 60;
+                event.getPlayer().sendMessage(ChatColor.RED + "Still timed out for " + min + " minutes and " + sec + " seconds.");
+            }
+            event.getPlayer().sendMessage(ChatColor.RED + "Still timed out for " + dif + " seconds.");
+            event.setCancelled(true);
+        } else {
+            plugin.getTimeoutMap().remove(event.getPlayer().getUniqueId());
+        }
+    }
+
+    @EventHandler
     private void onChatSpamEvent(AsyncPlayerChatEvent event) {
         //TODO Uncomment this
 //        if (event.getPlayer().isOp() || event.getPlayer().hasPermission("filter.exception")) return;
         UUID uuid = event.getPlayer().getUniqueId();
+        String msg = event.getMessage();
 
         //TODO
         // take length of messages into account (?)
@@ -121,9 +139,14 @@ public class ChatFilter implements Listener {
                                     //Bukkit.getLogger().warning(ChatColor.RED + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + " is likely botting.");
                                     Bukkit.broadcast(ChatColor.RED + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + " is typing suspiciously fast...", "filter");
                                     event.setCancelled(true);
+
                                 }
                             }.runTask(this.plugin);
-                            //TODO Punish: ban, mute, etc...
+                            List<String> swearCommands = filterConfig.getConfig().getStringList("bot.commands");
+                            for (String command : swearCommands) {
+                                command = setCommand(command, uuid, msg);
+                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                            }
                             return;
                         }
                     }
@@ -147,9 +170,12 @@ public class ChatFilter implements Listener {
                     } else {
                         this.spamMap.put(uuid, this.spamMap.getOrDefault(uuid, 0) + 1);
                         if (this.spamMap.get(uuid) > this.filterConfig.getConfig().getInt("spam.numberToTrigger")) {
-                            //Bukkit.getLogger().info(event.getPlayer().getName() + " is spamming messages!");
                             Bukkit.broadcast(ChatColor.RED + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + " is spamming messages.", "filter");
-                            //TODO punish spammer: mute, ban, make note etc...
+                            List<String> swearCommands = filterConfig.getConfig().getStringList("spam.commands");
+                            for (String command : swearCommands) {
+                                command = setCommand(command, uuid, msg);
+                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                            }
                         }
                     }
 
@@ -158,12 +184,11 @@ public class ChatFilter implements Listener {
             }
         }
     }
-    //TODO create hierarchy option or just keep order = hierarchy?
     @EventHandler(priority = EventPriority.LOWEST)
     private void onPlayerChatEvent(AsyncPlayerChatEvent event) {
         //TODO Uncomment this
 //        if (event.getPlayer().isOp() || event.getPlayer().hasPermission("filter.exception")) return;
-        //TODO Test with more tiers
+
         List<String> enabled = new ArrayList<>();
         for (String tier : this.groups) {
             if (this.filterConfig.getConfig().getBoolean("groups." + tier + ".enabled")) {
@@ -180,7 +205,7 @@ public class ChatFilter implements Listener {
         String[] msg = message.split(" ");
 
         // Using these booleans instead of implementing actions when found so that
-        // actions do not trigger multiple times and so that slurs will have a higher priority
+        // actions do not trigger multiple times and so that different groups will have different priority
         // IE: "blah swear blah slur, slur" will only trigger the slur handler and only once
         HashMap<String, Boolean> foundMap = new HashMap<>();
         for (String tier : enabled) {
@@ -200,8 +225,6 @@ public class ChatFilter implements Listener {
                 }
             }
         }
-
-        Bukkit.getLogger().info(foundMap.toString());
 
         for (String tier : enabled) {
             if (foundMap.get(tier)) {
