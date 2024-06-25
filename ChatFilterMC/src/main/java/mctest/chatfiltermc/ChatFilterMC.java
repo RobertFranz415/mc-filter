@@ -11,6 +11,7 @@ public final class ChatFilterMC extends JavaPlugin {
     private ConfigUtil filterConfig;
     private ConfigUtil historyConfig;
     private ConfigUtil libraryConfig;
+    private ConfigUtil wordListConfig;
     private ConfigUtil wordList;
     private RegexBuilder regexBuilder;
     private ChatFilter chatFilter;
@@ -144,6 +145,9 @@ public final class ChatFilterMC extends JavaPlugin {
 
     public HashMap<UUID, Long> getTimeoutMap() {
         return this.timeoutMap;
+    }
+    public RegexBuilder getRegexBuilder() {
+        return this.regexBuilder;
     }
 
     @Override
