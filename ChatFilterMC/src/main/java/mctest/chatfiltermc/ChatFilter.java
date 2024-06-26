@@ -119,8 +119,6 @@ public class ChatFilter implements Listener {
         UUID uuid = event.getPlayer().getUniqueId();
         String msg = event.getMessage();
 
-        //TODO
-        // take length of messages into account (?)
         if (this.filterConfig.getConfig().getBoolean("spam.enabled")) {
 
             if (this.filterConfig.getConfig().getBoolean("bot.enabled") || !Objects.equals(this.filterConfig.getConfig().getString("chatSpeed.mode"), "normal")) {
@@ -136,7 +134,6 @@ public class ChatFilter implements Listener {
                             new BukkitRunnable() {
                                 @Override
                                 public void run() {
-                                    //Bukkit.getLogger().warning(ChatColor.RED + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + " is likely botting.");
                                     Bukkit.broadcast(ChatColor.RED + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + " is typing suspiciously fast...", "filter");
                                     event.setCancelled(true);
 
@@ -217,10 +214,7 @@ public class ChatFilter implements Listener {
                 for (String rex : this.filterConfig.getConfig().getStringList("groups." + tier + ".regex")) {
                     if (msg[i].toLowerCase().matches(rex)) {
                         foundMap.put(tier, true);
-                        //TODO if() statement not necessary, not sure how/if effects efficiency
-                        //if (Objects.equals(this.filterConfig.getConfig().getString("groups." + tier + ".mode"), "censor")) {
-                            msg[i] = "****";
-                        //}
+                        msg[i] = "****";
                     }
                 }
             }
