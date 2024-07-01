@@ -677,7 +677,7 @@ public class Filter implements Listener, CommandExecutor {
                                     this.filterConfig.getConfig().set("groups." + args[0].toLowerCase() + ".partialMatches", state);
                                     plugin.setFilterConfig(filterConfig);
                                     plugin.getRegexBuilder().buildRegex(args[0].toLowerCase());
-                                    sender.sendMessage(ChatColor.GREEN + "Partial matches for " + args[0].toLowerCase() + " turned " + args[0].toLowerCase() + ".");
+                                    sender.sendMessage(ChatColor.GREEN + "Partial matches for " + args[0].toLowerCase() + " turned " + args[1].toLowerCase() + ".");
                                     break;
                                 default:
                                     sender.sendMessage(ChatColor.AQUA + "The commands for partial history are on and off.");
