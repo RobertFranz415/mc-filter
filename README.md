@@ -1,6 +1,6 @@
 # mc-filter
 
-A highly customizable chat filter for Minecraft.
+A highly customizable chat filter and moderation plugin for Minecraft.
 
 ## Features
 
