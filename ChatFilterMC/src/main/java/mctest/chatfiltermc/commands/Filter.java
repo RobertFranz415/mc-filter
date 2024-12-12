@@ -17,14 +17,12 @@ public class Filter implements Listener, CommandExecutor {
     private final ChatFilterMC plugin;
     private ConfigUtil filterConfig;
     private ConfigUtil historyConfig;
-    private final ConfigUtil wordListConfig;
+    private ConfigUtil wordListConfig;
 
     public Filter(ChatFilterMC plugin) {
         Bukkit.getPluginManager().registerEvents(this, plugin);
         this.plugin = plugin;
-        this.filterConfig = plugin.getFilterConfig();
-        this.historyConfig = new ConfigUtil(plugin, "History.yml");
-        this.wordListConfig = plugin.getWordList();
+        this.setConfigs();
     }
 
     //TODO
@@ -424,6 +422,17 @@ public class Filter implements Listener, CommandExecutor {
                             break;
                     }
                     break;
+                case "reload":
+                    try{
+                        this.plugin.reloadConfigs();
+                        sender.sendMessage("Plugin configs have been reloaded.");
+                        Bukkit.getLogger().info("[Chat Filter MC] Configs have been reloaded.");
+                    }catch (Exception e){
+                        sender.sendMessage("Could not reload configs, please check the console.");
+                        Bukkit.getLogger().warning("[Chat Filter MC] Something went wrong trying to reload the configs.");
+                        e.printStackTrace();
+                    }
+                    break;
                 default:
                     if (plugin.getGroupList().contains(args[0].toLowerCase())) break;
                     sender.sendMessage(ChatColor.AQUA + "The options for the filter command are: on/off, mode, admin, notes, spam, bot, speed, swears/slurs.");
@@ -715,5 +724,11 @@ public class Filter implements Listener, CommandExecutor {
         Long cnt = ((Objects.equals(var, "m") || Objects.equals(var, "min")) ? time * 60 : time) * 1000;
         Long until = now.getTime() + cnt;
         plugin.getTimeoutMap().put(uuid, until);
+    }
+
+    public void setConfigs(){
+        this.filterConfig = plugin.getFilterConfig();
+        this.historyConfig = new ConfigUtil(plugin, "History.yml");
+        this.wordListConfig = plugin.getWordList();
     }
 }

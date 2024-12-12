@@ -84,19 +84,33 @@ public final class ChatFilterMC extends JavaPlugin {
         this.wordList.save();
     }
 
-    private void reloadConfigs(){
+    public void reloadConfigs(){
         this.filterConfig = new ConfigUtil(this, "FilterList.yml");
         this.filterConfig.save();
+
         this.historyConfig = new ConfigUtil(this, "History.yml");
         this.historyConfig.save();
+
         this.libraryConfig = new ConfigUtil(this, "Library.yml");
         this.libraryConfig.save();
+
         this.wordList = new ConfigUtil(this, "WordList.yml");
         this.wordList.save();
 
+        this.initGroupList();
+
+        this.chatFilter.setConfigs();
         this.regexBuilder.setConfigs();
         this.chatFilter.setConfigs();
+
+        // Rebuilding regex statements
+        for (String tier : this.getGroupList()) {
+            this.regexBuilder.buildRegex(tier);
+        }
+
     }
+
+
 
     public void initGroupList() {
         try {

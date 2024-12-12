@@ -39,7 +39,7 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
-                            <outputFile>C:\Users\Cr3at\Documents\MinecraftPluginTests\Server\plugins\ChatFilterMC.jar</outputFile>
+                            <outputFile>C:\Users\shado\Documents\Plugins\ChatFilterMC.jar</outputFile>
                         </configuration>
                     </execution>
                 </executions>
