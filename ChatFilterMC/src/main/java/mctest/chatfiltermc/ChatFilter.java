@@ -3,6 +3,7 @@ package mctest.chatfiltermc;
 import mctest.chatfiltermc.util.ConfigUtil;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -43,7 +44,7 @@ public class ChatFilter implements Listener {
         if (this.filterConfig.getConfig().getBoolean("groups." + tier + ".msgToStaffEnabled")) {
             String msgToStaff = this.filterConfig.getConfig().getString("groups." + tier + ".msgToStaff");
             if (msgToStaff.contains("[senderName]")) {
-                msgToStaff = msgToStaff.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
+                msgToStaff = msgToStaff.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName());
             }
 
             Bukkit.broadcast(ChatColor.RED + msgToStaff, "filter");
@@ -75,10 +76,10 @@ public class ChatFilter implements Listener {
 
     private String setCommand(String command, UUID uuid, String msg) {
         if (command.contains("[senderName] [msg]")) {
-            command = command.replace("[senderName] [msg]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName() + ": \"" + msg + "\"");
+            command = command.replace("[senderName] [msg]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + ": \"" + msg + "\"");
         }
         if (command.contains("[senderName]")) {
-            command = command.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getDisplayName());
+            command = command.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName());
         }
         if (command.contains("[msg]")) {
             command = command.replace("[msg]", ": \"" + msg + "\"");
@@ -141,7 +142,7 @@ public class ChatFilter implements Listener {
                             }.runTask(this.plugin);
                             List<String> swearCommands = filterConfig.getConfig().getStringList("bot.commands");
                             for (String command : swearCommands) {
-                                command = setCommand(command, uuid, msg);
+                                command = this.setCommand(command, uuid, msg);
                                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
                             }
                             return;
@@ -170,8 +171,14 @@ public class ChatFilter implements Listener {
                             Bukkit.broadcast(ChatColor.RED + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + " is spamming messages.", "filter");
                             List<String> swearCommands = filterConfig.getConfig().getStringList("spam.commands");
                             for (String command : swearCommands) {
-                                command = setCommand(command, uuid, msg);
-                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                                command = this.setCommand(command, uuid, msg);
+                                final String com = command;
+                                new BukkitRunnable() {
+                                    @Override
+                                    public void run() {
+                                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), com);
+                                    }
+                                }.runTask(this.plugin);
                             }
                         }
                     }

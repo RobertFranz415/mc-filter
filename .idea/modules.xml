@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/ChatFilterMC/ChatFilterMC.iml" filepath="$PROJECT_DIR$/ChatFilterMC/ChatFilterMC.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/mc-filter.iml" filepath="$PROJECT_DIR$/.idea/mc-filter.iml" />
     </modules>
   </component>

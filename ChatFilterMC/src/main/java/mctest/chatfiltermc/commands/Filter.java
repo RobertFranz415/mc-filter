@@ -64,14 +64,14 @@ public class Filter implements Listener, CommandExecutor {
                         case "off":
                             Boolean adminBool = args[1].equals("on");
                             for (String tier : this.plugin.getGroupList()) {
-                                this.filterConfig.getConfig().set("groups." + tier + ".msgToAdminEnabled", adminBool);
+                                this.filterConfig.getConfig().set("groups." + tier + ".msgToStaffEnabled", adminBool);
                             }
                             plugin.setFilterConfig(filterConfig);
                             sender.sendMessage(ChatColor.GREEN + "Admin messages turned " + args[1].toLowerCase() + ".");
                             break;
                         case "current":
                             for (String tier : this.plugin.getGroupList()) {
-                                sender.sendMessage(ChatColor.AQUA + "Current " + tier + " admin message: " + ChatColor.WHITE + this.filterConfig.getConfig().getString("groups." + tier + ".msgToAdmin"));
+                                sender.sendMessage(ChatColor.AQUA + "Current " + tier + " admin message: " + ChatColor.WHITE + this.filterConfig.getConfig().getString("groups." + tier + ".msgToStaff"));
                             }
                             break;
                         case "edit":
@@ -81,7 +81,7 @@ public class Filter implements Listener, CommandExecutor {
                                 if (i != args.length - 1) cmd.append(" ");
                             }
                             for (String tier : this.plugin.getGroupList()) {
-                                this.filterConfig.getConfig().set("groups." + tier + ".msgToAdmin", cmd.toString());
+                                this.filterConfig.getConfig().set("groups." + tier + ".msgToStaff", cmd.toString());
                             }
                             plugin.setFilterConfig(this.filterConfig);
                             sender.sendMessage(ChatColor.GREEN + "Changed admin message to:" + ChatColor.WHITE + "\"" + cmd + ".\"");
@@ -324,8 +324,8 @@ public class Filter implements Listener, CommandExecutor {
                     this.filterConfig.getConfig().set(group + "partialMatches", false);
                     this.filterConfig.getConfig().set(group + "mode", "replace");
                     this.filterConfig.getConfig().set(group + "replaceWith", new ArrayList<>());
-                    this.filterConfig.getConfig().set(group + "msgToAdmin", "[senderName] triggered " + args[1].toLowerCase() + " filter.");
-                    this.filterConfig.getConfig().set(group + "msgToAdminEnabled", false);
+                    this.filterConfig.getConfig().set(group + "msgToStaff", "[senderName] triggered " + args[1].toLowerCase() + " filter.");
+                    this.filterConfig.getConfig().set(group + "msgToStaffEnabled", false);
                     this.filterConfig.getConfig().set(group + "commands", new ArrayList<>());
                     this.filterConfig.getConfig().set(group + "history", false);
                     this.filterConfig.getConfig().set(group + "maxStrikes", -1);
@@ -502,13 +502,13 @@ public class Filter implements Listener, CommandExecutor {
                                 case "on":
                                 case "off":
                                     Boolean msgState = args[2].equals("on");
-                                    this.filterConfig.getConfig().set("groups." + args[0].toLowerCase() + ".msgToAdminEnabled", msgState);
+                                    this.filterConfig.getConfig().set("groups." + args[0].toLowerCase() + ".msgToStaffEnabled", msgState);
                                     plugin.setFilterConfig(filterConfig);
                                     sender.sendMessage(ChatColor.GREEN + "Admin message for " + args[0].toLowerCase() + " turned " + args[2].toLowerCase() + ".");
                                     break;
                                 case "current":
                                     sender.sendMessage(ChatColor.AQUA + "Current admin message for " + args[0].toLowerCase() + ":");
-                                    sender.sendMessage(Objects.requireNonNull(this.filterConfig.getConfig().getString("groups." + args[0].toLowerCase() + ".msgToAdmin")));
+                                    sender.sendMessage(Objects.requireNonNull(this.filterConfig.getConfig().getString("groups." + args[0].toLowerCase() + ".msgToStaff")));
                                     break;
                                 case "edit":
                                     StringBuilder cmd = new StringBuilder();
@@ -516,7 +516,7 @@ public class Filter implements Listener, CommandExecutor {
                                         cmd.append(args[i]);
                                         if (i != args.length - 1) cmd.append(" ");
                                     }
-                                    this.filterConfig.getConfig().set("groups." + args[0].toLowerCase() + ".msgToAdmin", cmd.toString());
+                                    this.filterConfig.getConfig().set("groups." + args[0].toLowerCase() + ".msgToStaff", cmd.toString());
                                     plugin.setFilterConfig(this.filterConfig);
                                     sender.sendMessage(ChatColor.GREEN + "Admin message for " + args[0].toLowerCase() + " changed.");
                                     break;

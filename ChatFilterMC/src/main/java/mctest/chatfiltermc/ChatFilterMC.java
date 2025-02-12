@@ -20,6 +20,8 @@ public final class ChatFilterMC extends JavaPlugin {
     @Override
     public void onEnable() {
         // Plugin startup logic
+        Bukkit.getLogger().info("Starting ChatFilterMC...");
+
         this.saveResource("FilterList.yml", false);
         this.saveResource("History.yml", false);
         this.saveResource("Library.yml", false);
