@@ -9,7 +9,11 @@
 # replace: replaces filtered message with 'replaceWith'
 # clear: message is not sent at all
 
+<<<<<<< Updated upstream
 # msgToStaff: sends this message to all online admins if enabled
+=======
+# msgToStaff: sends this message to all online staff if enabled
+>>>>>>> Stashed changes
 # commands: commands which run after a filtered word was detected
 # history saves filtered messages to notes
 # strikeActions: commands automatically run when maxStrikes is reached by a player

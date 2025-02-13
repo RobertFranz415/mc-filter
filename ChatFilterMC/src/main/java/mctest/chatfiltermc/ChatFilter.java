@@ -216,13 +216,16 @@ public class ChatFilter implements Listener {
             foundMap.put(tier, false);
         }
 
-        for (int i = 0; i < msg.length; i++) {
-            for (String tier : enabled) {
-                for (String rex : this.filterConfig.getConfig().getStringList("groups." + tier + ".regex")) {
+        for (String tier : enabled) {
+            for (String rex : this.filterConfig.getConfig().getStringList("groups." + tier + ".regex")) {
+                for (int i = 0; i < msg.length; i++) {
                     if (msg[i].toLowerCase().matches(rex)) {
                         foundMap.put(tier, true);
                         msg[i] = "****";
                     }
+                }
+                if (message.toLowerCase().matches(rex)) {
+                    //Bukkit.getLogger().info("****FOUND****");
                 }
             }
         }
