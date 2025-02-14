@@ -28,7 +28,7 @@ Timeout a player from chatting for a selected amount of time.
     - on/off
     - mode
         - censor/replace/clear
-    - admin
+    - staff
         - on/off
         - current
         - edit
@@ -58,26 +58,38 @@ Timeout a player from chatting for a selected amount of time.
     - create
     - remove
     - groups
+    - words
     - timeout
     - partial
         - on/off
     - [filter group] 
-    
         - on/off
         - mode
           - censor/replace/clear
-          
         - commands
           - list
           - add
           - remove
-          
         - replace
-          - current
-          - edit
-          
+          - list
+          - add
+          - remove
         - staff
+          - on/off
           - current
           - edit
-          
+        - strikes
+          - max
+          - off
+          - commands
+            - list
+            - add
+            - remove
+        - history
+          - on/off
+        - add
+        - remove
+        - words
+        - partial
+          -on/off
 
