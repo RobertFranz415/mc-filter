@@ -91,5 +91,5 @@ Timeout a player from chatting for a selected amount of time.
         - remove
         - words
         - partial
-          -on/off
+          - on/off
 
