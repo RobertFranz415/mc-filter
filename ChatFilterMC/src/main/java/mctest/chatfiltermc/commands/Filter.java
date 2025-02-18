@@ -3,11 +3,16 @@ package mctest.chatfiltermc.commands;
 import com.sun.tools.javac.util.StringUtils;
 import mctest.chatfiltermc.ChatFilterMC;
 import mctest.chatfiltermc.util.ConfigUtil;
+import mctest.chatfiltermc.util.ConfirmPrompt;
+import mctest.chatfiltermc.util.ConvPrompt;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.conversations.Conversation;
+import org.bukkit.conversations.ConversationFactory;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 
 import java.text.SimpleDateFormat;
@@ -28,10 +33,11 @@ public class Filter implements Listener, CommandExecutor {
     }
 
     //TODO
-    // Clean up factory by creating methods instead of code inside switch
+    // new:
+    // Clean up switch, make commands consistent
     // add strikes on (unless theres a reason why there is none)
     // add more confirmation messages
-    //
+    // old:
     // Decide if there should be separate files for regex and config stuff
     // Figure out if possible to change final groups command to switch
     // figure out best order of command... currently /filter notes strike [player] clear swears, etc...
@@ -43,6 +49,7 @@ public class Filter implements Listener, CommandExecutor {
         this.filterConfig = plugin.getFilterConfig();
 
         try {
+            // All group section
             switch (args[0].toLowerCase()) {
                 case "on":
                 case "off":
@@ -73,10 +80,16 @@ public class Filter implements Listener, CommandExecutor {
                     break;
                 case "strikes":
                     if (args.length < 2) return true;
-                    if (args[1].equalsIgnoreCase("max")) {
-                        this.setMaxStrikes(sender, args[2], "all");
-                    } else {
-                        sender.sendMessage(ChatColor.AQUA + "The options for strikes are max and options.");
+                    switch (args[1].toLowerCase()) {
+                        case "max":
+                            this.setMaxStrikes(sender, args[2], "all");
+                            break;
+                        case "off":
+                            this.toggleStrikes("all");
+                            break;
+                        default:
+                            sender.sendMessage(ChatColor.AQUA + "The options for strikes are max.");
+                            break;
                     }
                     break;
                 case "notes":
@@ -154,10 +167,14 @@ public class Filter implements Listener, CommandExecutor {
                     break;
                 case "remove":
                     //TODO Possibly change name to prevent confusion with other remove commands
-                    this.removeGroup(args, sender);
+                    //this.removeGroup(args, sender);
+                    this.promptRemove(args, sender);
                     break;
                 case "groups":
                     this.listGroups(args, sender);
+                    break;
+                case "words":
+                    this.listWords(sender, "all");
                     break;
                 case "timeout":
                     this.callTimeout(args, sender);
@@ -175,10 +192,11 @@ public class Filter implements Listener, CommandExecutor {
                     break;
                 default:
                     if (plugin.getGroupList().contains(args[0].toLowerCase())) break;
-                    sender.sendMessage(ChatColor.AQUA + "The options for the filter command are: on/off, mode, staff, notes, spam, bot, speed, or the name of a filter group.");
+                    sender.sendMessage(ChatColor.AQUA + "The options for the filter command are: on/off, mode, staff, history, strikes, notes, spam, bot, speed, create, remove, groups, words, timeout, partial, or the name of a filter group.");
                     sender.sendMessage(ChatColor.AQUA + "Plugin created by Mithraea and DeathsValentine");
                     break;
             }
+            // Group specific section
             if (plugin.getGroupList().contains(args[0].toLowerCase())) {
                 try {
                     //TODO Create variables out of args for clearer readability
@@ -235,7 +253,7 @@ public class Filter implements Listener, CommandExecutor {
                                     this.removeReplacements(args, sender);
                                     break;
                                 default:
-                                    sender.sendMessage(ChatColor.AQUA + "The possible replace commands are: list, add, and remove.");
+                                    sender.sendMessage(ChatColor.AQUA + "The options for replace are: list, add, and remove.");
                                     break;
                             }
                             break;
@@ -245,7 +263,7 @@ public class Filter implements Listener, CommandExecutor {
                                     this.setMaxStrikes(sender, args[3], args[0].toLowerCase());
                                     break;
                                 case "off":
-                                    this.toggleStrikes(args, sender);
+                                    this.toggleStrikes(args[0].toLowerCase());
                                     break;
                                 case "commands":
                                     switch (args[3].toLowerCase()) {
@@ -277,11 +295,14 @@ public class Filter implements Listener, CommandExecutor {
                         case "remove":
                             this.removeWord(args, sender);
                             break;
+                        case "words":
+                            this.listWords(sender, args[0].toLowerCase());
+                            break;
                         case "partial":
                             this.togglePartial(sender, args[0].toLowerCase(), args[2].toLowerCase());
                             break;
                         default:
-                            sender.sendMessage(ChatColor.AQUA + "The possible options are: on/off, mode, replace, commands, and staff.");
+                            sender.sendMessage(ChatColor.AQUA + "The possible options are: on/off, mode, replace, commands, staff, strikes, history, add, remove, words, and partial.");
                             break;
 
                     }
@@ -309,6 +330,7 @@ public class Filter implements Listener, CommandExecutor {
         }
     }
     private void addPlayerNotes(String[] args, CommandSender sender, String player, UUID uuid) {
+        this.historyConfig.getConfig().set(uuid + ".username", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName());
         List<String> notesToAdd = new ArrayList<>(this.historyConfig.getConfig().getStringList(uuid + ".notes"));
         StringBuilder note = new StringBuilder();
         String str = sender.getName().equals("CONSOLE") ? "> " : ": ";
@@ -430,7 +452,6 @@ public class Filter implements Listener, CommandExecutor {
         }
     }
     private void createGroup(String[] args, CommandSender sender) {
-        //TODO make sure chatfilter refreshes or else need a server restart after creating new group
         if (args.length < 2) {
             sender.sendMessage(ChatColor.AQUA + "Must enter a name for the new filter group.");
             return;
@@ -466,18 +487,11 @@ public class Filter implements Listener, CommandExecutor {
         plugin.setWordList(this.wordListConfig);
 
         plugin.initGroupList();
+        plugin.reloadGroupList();
         sender.sendMessage(ChatColor.GREEN + "New filter group " + args[1].toLowerCase() + " created!  Now to edit the options.");
 
     }
-    private void removeGroup(String[] args, CommandSender sender) {
-        //TODO add confirmation message
-        if (args.length < 2) {
-            sender.sendMessage(ChatColor.AQUA + "Must enter the name of filter group you want to remove.");
-            return ;
-        } else if (args.length > 2) {
-            sender.sendMessage(ChatColor.AQUA + "Must only enter the name of the filter group you want to remove.");
-            return ;
-        }
+    public void removeGroup(String[] args, CommandSender sender) {
         if (this.filterConfig.getConfig().contains("groups." + args[1].toLowerCase())) {
             this.filterConfig.getConfig().set("groups." + args[1].toLowerCase(), null);
             this.filterConfig.save();
@@ -485,14 +499,30 @@ public class Filter implements Listener, CommandExecutor {
 
             plugin.initGroupList();
             sender.sendMessage(ChatColor.GREEN + "Filter group " + args[1].toLowerCase() + " removed.");
-        } else {
-            sender.sendMessage(ChatColor.AQUA + "Not a valid filter group.");
         }
         if (this.wordListConfig.getConfig().contains(args[1].toLowerCase())) {
             this.wordListConfig.getConfig().set(args[1].toLowerCase(), null);
             this.wordListConfig.save();
             plugin.setWordList(this.wordListConfig);
         }
+    }
+
+    private void promptRemove(String[] args, CommandSender sender) {
+        if (args.length < 2) {
+            sender.sendMessage(ChatColor.AQUA + "Must enter the name of filter group you want to remove.");
+            return ;
+        } else if (args.length > 2) {
+            sender.sendMessage(ChatColor.AQUA + "Must only enter the name of the filter group you want to remove.");
+            return ;
+        }
+
+        if (!this.filterConfig.getConfig().contains("groups." + args[1].toLowerCase())) {
+            sender.sendMessage(ChatColor.AQUA + "Not a valid filter group!");
+            return;
+        }
+        ConversationFactory cf = new ConversationFactory(this.plugin);
+        Conversation conv = cf.withFirstPrompt(new ConfirmPrompt(this, sender, args, args[1].toLowerCase())).withLocalEcho(true).buildConversation((Player) sender);
+        conv.begin();
     }
     private void listGroups(String[] args, CommandSender sender) {
         if (args.length != 1) {
@@ -701,8 +731,14 @@ public class Filter implements Listener, CommandExecutor {
         plugin.setFilterConfig(this.filterConfig);
     }
 
-    private void toggleStrikes(String[] args, CommandSender sender) {
-        this.filterConfig.getConfig().set("groups." + args[0].toLowerCase() + ".maxStrikes", -1);
+    private void toggleStrikes(String group) {
+        if (Objects.equals(group, "all")) {
+            for (String tier : this.plugin.getGroupList()) {
+                this.filterConfig.getConfig().set("groups." + tier + ".maxStrikes", -1);
+            }
+        } else {
+            this.filterConfig.getConfig().set("groups." + group + ".maxStrikes", -1);
+        }
         this.filterConfig.save();
         plugin.setFilterConfig(this.filterConfig);
     }
@@ -802,6 +838,31 @@ public class Filter implements Listener, CommandExecutor {
         plugin.setWordList(this.wordListConfig);
         plugin.getRegexBuilder().buildRegex(args[0].toLowerCase());
         sender.sendMessage(ChatColor.GREEN + "Removed " + args[2].toLowerCase() + " from " + args[0].toLowerCase() + " filter list.");
+    }
+
+    private void listWords(CommandSender sender, String group) {
+        List<String> gList = new ArrayList<>();
+        if (Objects.equals(group, "all")) {
+            gList.addAll(0, this.wordListConfig.getConfig().getKeys(false));
+        } else {
+            gList.add(group);
+        }
+        for (String g : gList) {
+            List<String> wList = this.wordListConfig.getConfig().getStringList(g);
+            int numGroups = this.filterConfig.getConfig().getKeys(false).size();
+            int groupLevel = this.filterConfig.getConfig().getInt("groups." + g + ".level");
+            float sev = (float) groupLevel / numGroups;
+            if (sev <= ((float) 1 /3)) {
+                sender.sendMessage(ChatColor.RED + g);
+            } else if (sev > ((float) 1 /3) && sev <= ((float) 2/3)) {
+                sender.sendMessage(ChatColor.YELLOW + g);
+            } else if (sev > ((float) 2 /3)) {
+                sender.sendMessage(ChatColor.GREEN + g);
+            }
+            for (String word : wList) {
+                sender.sendMessage(" " + word);
+            }
+        }
     }
 
     private void togglePartial(CommandSender sender, String group, String toggle) {

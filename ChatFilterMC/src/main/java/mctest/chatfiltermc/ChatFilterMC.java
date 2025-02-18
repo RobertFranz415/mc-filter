@@ -112,7 +112,10 @@ public final class ChatFilterMC extends JavaPlugin {
 
     }
 
-
+    public void reloadGroupList() {
+        this.initGroupList();
+        this.chatFilter.setConfigs();
+    }
 
     public void initGroupList() {
         try {

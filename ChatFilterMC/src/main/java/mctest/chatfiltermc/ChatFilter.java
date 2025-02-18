@@ -19,7 +19,7 @@ public class ChatFilter implements Listener {
     private ConfigUtil historyConfig;
     private final HashMap<UUID, Integer> spamMap = new HashMap<>();
     private final HashMap<UUID, Date> lastMsgMap = new HashMap<>();
-    private final List<String> groups;
+    private List<String> groups;
 
     public ChatFilter(ChatFilterMC plugin) {
         Bukkit.getPluginManager().registerEvents(this, plugin);
@@ -31,7 +31,10 @@ public class ChatFilter implements Listener {
     //TODO
     // messages separate from notes (?)
     private void handleActions(UUID uuid, String tier, String msg) {
-        this.historyConfig = plugin.getHistoryConfig();
+        if (this.filterConfig.getConfig().getBoolean("groups." + tier + ".history")) {
+            this.historyConfig = plugin.getHistoryConfig();
+            this.historyConfig.getConfig().set(uuid + ".username", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName());
+        }
 
         // Commands
         List<String> swearCommands = filterConfig.getConfig().getStringList("groups." + tier + ".commands");
@@ -82,7 +85,7 @@ public class ChatFilter implements Listener {
             command = command.replace("[senderName]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName());
         }
         if (command.contains("[msg]")) {
-            command = command.replace("[msg]", ": \"" + msg + "\"");
+            command = command.replace("[msg]", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + ": \"" + msg + "\"");
         }
         if (command.contains("[date]")) {
             Date now = new Date();
@@ -273,5 +276,6 @@ public class ChatFilter implements Listener {
     public void setConfigs(){
         this.filterConfig = this.plugin.getFilterConfig();
         this.historyConfig = this.plugin.getHistoryConfig();
+        this.groups = plugin.getGroupList();
     }
 }
