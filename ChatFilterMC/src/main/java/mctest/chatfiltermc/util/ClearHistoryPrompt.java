@@ -1,33 +1,35 @@
 package mctest.chatfiltermc.util;
 
 import mctest.chatfiltermc.commands.Filter;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.conversations.ConversationContext;
 import org.bukkit.conversations.Prompt;
 import org.bukkit.conversations.StringPrompt;
 
-public class ConvPrompt extends StringPrompt {
+import java.util.Objects;
+import java.util.UUID;
+
+public class ClearHistoryPrompt extends StringPrompt {
 
     private final Filter filter;
-    private final String group;
-    private final String[] args;
+    private final UUID uuid;
     private final CommandSender sender;
-    public ConvPrompt(Filter filter, CommandSender sender, String[] args, String group) {
+    public ClearHistoryPrompt(Filter filter, CommandSender sender, UUID uuid) {
         this.filter = filter;
-        this.group = group;
-        this.args = args;
+        this.uuid = uuid;
         this.sender = sender;
     }
     @Override
     public String getPromptText(ConversationContext conversationContext) {
-        return ChatColor.AQUA + "Are you sure you want to delete the " + group + " group?";
+        return ChatColor.AQUA + "Are you sure you want to wipe the history for " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + "?";
     }
 
     @Override
     public Prompt acceptInput(ConversationContext conversationContext, String s) {
         if (s.equalsIgnoreCase("y") || s.equalsIgnoreCase("n")) {
-            filter.removeGroup(args, sender);
+            filter.wipeHistory(this.sender, this.uuid);
         }
         return null;
     }

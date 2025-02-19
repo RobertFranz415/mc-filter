@@ -2,6 +2,7 @@ package mctest.chatfiltermc.commands;
 
 import com.sun.tools.javac.util.StringUtils;
 import mctest.chatfiltermc.ChatFilterMC;
+import mctest.chatfiltermc.util.ClearHistoryPrompt;
 import mctest.chatfiltermc.util.ConfigUtil;
 import mctest.chatfiltermc.util.ConfirmPrompt;
 import mctest.chatfiltermc.util.ConvPrompt;
@@ -151,6 +152,14 @@ public class Filter implements Listener, CommandExecutor {
                                     sender.sendMessage("  " + tier + ": " + cnt);
                                 }
                             }
+                            break;
+                        case "wipe":
+                            if (!this.historyConfig.getConfig().contains(uuid.toString())) {
+                                sender.sendMessage(ChatColor.AQUA + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + " does not have any history");
+                                Bukkit.getLogger().info("DOES NOT EXIST");
+                                break;
+                            }
+                            this.promptHistoryWipe(sender, uuid);
                             break;
                         default:
                             sender.sendMessage(ChatColor.AQUA + "The notes commands are: list, add, remove, and strikes.");
@@ -380,6 +389,23 @@ public class Filter implements Listener, CommandExecutor {
         }
     }
 
+    private void promptHistoryWipe(CommandSender sender, UUID uuid) {
+        if (!this.historyConfig.getConfig().contains(uuid.toString())) {
+            sender.sendMessage(ChatColor.RED + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + " does not have any history");
+            Bukkit.getLogger().info("DOES NOT EXIST");
+            return;
+        }
+        ConversationFactory cf = new ConversationFactory(this.plugin);
+        Conversation conv = cf.withFirstPrompt(new ClearHistoryPrompt(this, sender, uuid)).withLocalEcho(true).buildConversation((Player) sender);
+        conv.begin();
+    }
+
+    public void wipeHistory(CommandSender sender, UUID uuid) {
+        this.historyConfig.getConfig().set(uuid.toString(), null);
+        this.historyConfig.save();
+        sender.sendMessage(ChatColor.GREEN + "Removed " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + "'s history!");
+    }
+
     private void clearPlayerStrikes(String[] args, CommandSender sender, String player, UUID uuid) {
         if (args.length == 4) {
             for (String tier : this.plugin.getGroupList()) {
@@ -518,9 +544,7 @@ public class Filter implements Listener, CommandExecutor {
         } else if (args.length > 2) {
             sender.sendMessage(ChatColor.AQUA + "Must only enter the name of the filter group you want to remove.");
             return ;
-        }
-
-        if (!this.filterConfig.getConfig().contains("groups." + args[1].toLowerCase())) {
+        } else if (!this.filterConfig.getConfig().contains("groups." + args[1].toLowerCase())) {
             sender.sendMessage(ChatColor.AQUA + "Not a valid filter group!");
             return;
         }

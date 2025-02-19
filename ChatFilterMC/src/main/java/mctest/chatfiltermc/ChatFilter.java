@@ -75,6 +75,9 @@ public class ChatFilter implements Listener {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
             }
         }
+        Date now = new Date();
+        SimpleDateFormat format = new SimpleDateFormat("MM/dd/yyyy");
+        this.historyConfig.getConfig().set(uuid + ".latest", format.format(now));
     }
 
     private String setCommand(String command, UUID uuid, String msg) {

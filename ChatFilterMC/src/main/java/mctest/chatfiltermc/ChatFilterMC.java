@@ -5,6 +5,7 @@ import mctest.chatfiltermc.util.ConfigUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 public final class ChatFilterMC extends JavaPlugin {
@@ -53,6 +54,11 @@ public final class ChatFilterMC extends JavaPlugin {
                     this.regexBuilder.buildRegex(tier);
                 }
             }, 1);
+        }
+
+        if (filterConfig.getConfig().getBoolean("autoDelete.enabled")) {
+            Bukkit.getLogger().info("AUTO DELETE ENABLED");
+            this.checkExpiredHistory();
         }
     }
 
@@ -167,6 +173,31 @@ public final class ChatFilterMC extends JavaPlugin {
     }
     public RegexBuilder getRegexBuilder() {
         return this.regexBuilder;
+    }
+
+    private void checkExpiredHistory() {
+        int[] months = {0, 31, 59, 89, 120, 151, 181, 212, 243, 273, 304, 334};
+        ArrayList<String> keys = new ArrayList<>(this.historyConfig.getConfig().getKeys(false));
+        for (String key : keys) {
+            if (!this.historyConfig.getConfig().contains(key+".latest")) {
+                Bukkit.getLogger().info("No latest for " + Objects.requireNonNull(Bukkit.getPlayer(key)).getName());
+                continue;
+            }
+
+            String[] date = Objects.requireNonNull(this.historyConfig.getConfig().getString(key + ".latest")).split("/");
+            int days = months[Integer.parseInt(date[0])] + Integer.parseInt(date[1]) + (Integer.parseInt(date[2]) - 2000) * 365;
+            days += filterConfig.getConfig().getInt("autoDelete.time");
+
+            Date now = new Date();
+            SimpleDateFormat format = new SimpleDateFormat("MM/dd/yyyy");
+            String[] curDate = format.format(now).split("/");
+            int curDays = months[Integer.parseInt(curDate[0])] + Integer.parseInt(curDate[1]) + (Integer.parseInt(curDate[2]) - 2000) * 365;
+
+            if (days - curDays <= 0) {
+                this.historyConfig.getConfig().set(key, null);
+            }
+        }
+        this.historyConfig.save();
     }
 
     @Override
