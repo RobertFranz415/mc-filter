@@ -55,6 +55,10 @@ public class Filter implements Listener, CommandExecutor {
                 case "off":
                     this.toggleFilter(sender, "all", args[0].toLowerCase());
                     break;
+                case "reload":
+                    plugin.reloadConfigs();
+                    sender.sendMessage(ChatColor.GREEN + "Plugin reloaded!");
+                    break;
                 case "mode":
                     this.changeMode(sender, "all", args[1].toLowerCase());
                     break;
