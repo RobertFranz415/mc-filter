@@ -8,13 +8,19 @@ import mctest.chatfiltermc.util.ConfirmPrompt;
 import mctest.chatfiltermc.util.ConvPrompt;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.conversations.Conversation;
 import org.bukkit.conversations.ConversationFactory;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -135,7 +141,11 @@ public class Filter implements Listener, CommandExecutor {
                             if (args.length >= 4) {
                                 switch (args[3].toLowerCase()) {
                                     case "clear":
-                                        this.clearPlayerStrikes(args, sender, args[2].toLowerCase(), uuid);
+                                        if (args.length == 4) {
+                                            this.clearPlayerStrikes(sender, args[2].toLowerCase(), uuid, "all");
+                                        } else {
+                                            this.clearPlayerStrikes(sender, args[2].toLowerCase(), uuid, args[4].toLowerCase());
+                                        }
                                         break;
                                     case "set":
                                         this.setPlayerStrikes(args, sender, args[2].toLowerCase(), uuid);
@@ -146,11 +156,8 @@ public class Filter implements Listener, CommandExecutor {
                                 }
                             } else {
                                 // if no action specified: print the player's strikes
-                                sender.sendMessage(ChatColor.AQUA + "Strikes: ");
-                                for (String tier : this.plugin.getGroupList()) {
-                                    int cnt = (historyConfig.getConfig().getString(uuid + "." + tier + ".count") == null) ? 0 : historyConfig.getConfig().getInt(uuid + "." + tier + ".count");
-                                    sender.sendMessage("  " + tier + ": " + cnt);
-                                }
+                                this.listPlayerStrikes(sender, uuid);
+
                             }
                             break;
                         case "wipe":
@@ -167,6 +174,7 @@ public class Filter implements Listener, CommandExecutor {
                     }
                     break;
                 case "spam":
+                    //TODO change to remove args
                     this.toggleSpamDetection(args, sender);
                     break;
                 case "bot":
@@ -190,7 +198,18 @@ public class Filter implements Listener, CommandExecutor {
                     this.listWords(sender, "all");
                     break;
                 case "timeout":
-                    this.callTimeout(args, sender);
+                    if (args.length != 4) {
+                        sender.sendMessage(ChatColor.AQUA + "In order to time someone out use the format: username [time] m/min/s/sec.");
+                        break;
+                    }
+                    UUID touuid = null;
+                    try {
+                        touuid = Objects.requireNonNull(Bukkit.getPlayer(args[1])).getUniqueId();
+                    } catch (Exception e) {
+                        sender.sendMessage(ChatColor.AQUA + "Please enter a valid username.");
+                        break;
+                    }
+                    this.callTimeout(sender, touuid, args[2], args[3]);
                     break;
                 case "partial":
                     switch (args[1].toLowerCase()) {
@@ -324,6 +343,16 @@ public class Filter implements Listener, CommandExecutor {
                     return true;
                 }
             }
+            else {
+                UUID uuid = null;
+                try {
+                    uuid = Objects.requireNonNull(Bukkit.getPlayer(args[0])).getUniqueId();
+                } catch (Exception e) {
+                    sender.sendMessage(ChatColor.AQUA + "Not a valid command.");
+                    return true;
+                }
+                this.openPlayerGUI(sender, uuid, "main");
+            }
         } catch (Exception e) {
             sender.sendMessage(ChatColor.AQUA + "Not a valid command.");
         }
@@ -392,7 +421,6 @@ public class Filter implements Listener, CommandExecutor {
     private void promptHistoryWipe(CommandSender sender, UUID uuid) {
         if (!this.historyConfig.getConfig().contains(uuid.toString())) {
             sender.sendMessage(ChatColor.RED + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + " does not have any history");
-            Bukkit.getLogger().info("DOES NOT EXIST");
             return;
         }
         ConversationFactory cf = new ConversationFactory(this.plugin);
@@ -405,15 +433,21 @@ public class Filter implements Listener, CommandExecutor {
         this.historyConfig.save();
         sender.sendMessage(ChatColor.GREEN + "Removed " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + "'s history!");
     }
-
-    private void clearPlayerStrikes(String[] args, CommandSender sender, String player, UUID uuid) {
-        if (args.length == 4) {
+    private void listPlayerStrikes(CommandSender sender, UUID uuid) {
+        sender.sendMessage(ChatColor.AQUA + "Strikes: ");
+        for (String tier : this.plugin.getGroupList()) {
+            int cnt = (historyConfig.getConfig().getString(uuid + "." + tier + ".count") == null) ? 0 : historyConfig.getConfig().getInt(uuid + "." + tier + ".count");
+            sender.sendMessage("  " + tier + ": " + cnt);
+        }
+    }
+    private void clearPlayerStrikes(CommandSender sender, String player, UUID uuid, String group) {
+        if (Objects.equals(group, "all")) {
             for (String tier : this.plugin.getGroupList()) {
                 this.historyConfig.getConfig().set(uuid + "." + tier + ".count", 0);
             }
             sender.sendMessage(ChatColor.GREEN + "Removed all of the strikes for " + player + ".");
-        } else if (this.plugin.getGroupList().contains(args[4].toLowerCase())) {
-            plugin.getHistoryConfig().getConfig().set(uuid + "." + args[4].toLowerCase() + ".count", 0);
+        } else if (this.plugin.getGroupList().contains(group)) {
+            plugin.getHistoryConfig().getConfig().set(uuid + "." + group + ".count", 0);
             plugin.getHistoryConfig().save();
             sender.sendMessage(ChatColor.GREEN + "Strikes removed for " + player + ".");
         } else {
@@ -423,6 +457,7 @@ public class Filter implements Listener, CommandExecutor {
         plugin.setHistoryConfig(this.historyConfig);
     }
     private void setPlayerStrikes(String[] args, CommandSender sender, String player, UUID uuid) {
+        //TODO Implement conversation
         if (plugin.getGroupList().contains(args[4].toLowerCase())) {
             try {
                 int strikes = Integer.parseInt(args[5]);
@@ -562,33 +597,26 @@ public class Filter implements Listener, CommandExecutor {
             sender.sendMessage(" -" + g);
         }
     }
-    private void callTimeout(String[] args, CommandSender sender) {
-        if (args.length != 4) {
-            sender.sendMessage(ChatColor.AQUA + "In order to time someone out use the format: username [time] m/min/s/sec.");
-            return;
-        }
-        UUID touuid = null;
-        try {
-            touuid = Objects.requireNonNull(Bukkit.getPlayer(args[1])).getUniqueId();
-        } catch (Exception e) {
-            sender.sendMessage(ChatColor.AQUA + "Please enter a valid username.");
-            return;
-        }
+    private void callTimeout(CommandSender sender, UUID uuid, String length, String unit) {
+
         long time;
         try {
-            time = Long.parseLong(args[2]);
+            time = Long.parseLong(length);
         } catch (Exception e) {
             sender.sendMessage(ChatColor.AQUA + "Must enter a time in numbers.");
             return;
         }
-        String var = args[3];
-        if (!Objects.equals(var, "m") && !Objects.equals(var, "min") && !Objects.equals(var, "s") && !Objects.equals(var, "sec")) {
+
+        if (!Objects.equals(unit.toLowerCase(), "m") && !Objects.equals(unit.toLowerCase(), "min") && !Objects.equals(unit.toLowerCase(), "s") && !Objects.equals(unit.toLowerCase(), "sec")) {
             sender.sendMessage(ChatColor.AQUA + "For minutes use m or min.  For seconds use s or sec.");
             return;
         }
-
-        this.timeout(touuid, time, var);
-        Objects.requireNonNull(Bukkit.getPlayer(touuid)).sendMessage(ChatColor.RED + "You have been timed out for " + time + " " + var);
+        if (plugin.getTimeoutMap().containsKey(uuid) && length.equals("0")) {
+            Objects.requireNonNull(Bukkit.getPlayer(uuid)).sendMessage(ChatColor.GREEN + "Your timeout was removed!");
+        } else if (!length.equals("0")) {
+            Objects.requireNonNull(Bukkit.getPlayer(uuid)).sendMessage(ChatColor.RED + "You have been timed out for " + time + " " + unit);
+        }
+        this.timeout(uuid, time, unit);
 
     }
     private void toggleFilter(CommandSender sender, String group, String toggle) {
@@ -921,6 +949,282 @@ public class Filter implements Listener, CommandExecutor {
         }
     }
 
+    @EventHandler
+    private void onInventoryClickEvent(InventoryClickEvent event) {
+        String menu = event.getView().getTitle();
+        if (!menu.contains("CFMC")) return;
+        event.setCancelled(true);
+        UUID uuid = UUID.fromString(event.getView().getItem(4).getItemMeta().getLore().get(0));
+        int slot = event.getSlot();
+
+        switch (menu) {
+            case "CFMC - Moderation Tools":
+                switch (slot) {
+                    case 12:
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "notes");
+                        break;
+                    case 13:
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "strikes");
+                        break;
+                    case 14:
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "clear");
+                        break;
+                    case 15:
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "timeout");
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case "CFMC - Notes":
+                switch (slot) {
+                    case 0:
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "main");
+                        break;
+                    case 12:
+                        this.listPlayerNotes(event.getWhoClicked(), Bukkit.getPlayer(uuid).getName(), uuid);
+                        break;
+                    case 13:
+                        //TODO fix this
+                        this.addPlayerNotes(new String[5], event.getWhoClicked(), Bukkit.getPlayer(uuid).getName(), uuid);
+                        break;
+                    case 14:
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "notesRemove");
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case "CFMC - Notes - Remove":
+                switch (slot) {
+                    case 0:
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "notes");
+                        break;
+                    case 12:
+                        //all
+                        this.removePlayerNote(event.getWhoClicked(), Bukkit.getPlayer(uuid).getName(), uuid, "all");
+                        break;
+                    case 13:
+                        //history
+                        this.removePlayerNote(event.getWhoClicked(), Bukkit.getPlayer(uuid).getName(), uuid, "history");
+                        break;
+                    case 14:
+                        //#
+                        //TODO do this
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case "CFMC - Strikes":
+                switch (slot) {
+                    case 0:
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "main");
+                        break;
+                    case 12:
+                        this.listPlayerStrikes(event.getWhoClicked(), uuid);
+                        break;
+                    case 13:
+                        //TODO add menu/conversation for specific group
+                        this.clearPlayerStrikes(event.getWhoClicked(), Bukkit.getPlayer(uuid).getName(), uuid, "all");
+                        break;
+                    case 14:
+                        //TODO fix args/command init
+                        this.setPlayerStrikes(new String[5], event.getWhoClicked(), Bukkit.getPlayer(uuid).getName(), uuid);
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case "CFMC - Clear History":
+                switch (slot) {
+                    case 0:
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "main");
+                        break;
+                    case 13:
+                        // delete
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case "CFMC - Timeout":
+                switch (slot) {
+                    case 0:
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "main");
+                        break;
+                    case 9:
+                        this.callTimeout(event.getWhoClicked(), uuid, "0", "s");
+                        break;
+                    case 10:
+                        this.callTimeout(event.getWhoClicked(), uuid, "30", "s");
+                        break;
+                    case 11:
+                        this.callTimeout(event.getWhoClicked(), uuid, "1", "m");
+                        break;
+                    case 12:
+                        this.callTimeout(event.getWhoClicked(), uuid, "5", "m");
+                        break;
+                    case 13:
+                        this.callTimeout(event.getWhoClicked(), uuid, "10", "m");
+                        break;
+                    case 14:
+                        this.callTimeout(event.getWhoClicked(), uuid, "30", "m");
+                        break;
+                    case 15:
+                        this.callTimeout(event.getWhoClicked(), uuid, "60", "m");
+                        break;
+                    case 16:
+                        this.callTimeout(event.getWhoClicked(), uuid, "1440", "m");
+                        break;
+                    case 17:
+                        this.callTimeout(event.getWhoClicked(), uuid, "1000000", "m");
+                        break;
+
+                }
+                break;
+            default:
+                break;
+        }
+        //event.getWhoClicked().closeInventory();
+    }
+    //TODO Add spam detection, bot detection, chat speed menu
+    private void openSettingsGUI(CommandSender sender, UUID uuid, String menu) {
+        Player player = (Player) sender;
+        Inventory inv;
+        if (Objects.equals(menu, "main")) {
+            String speed = this.filterConfig.getConfig().getString("chatSpeed.mode");
+            String interval = this.filterConfig.getConfig().getString("chatSpeed." + speed);
+
+            inv = Bukkit.createInventory(player, 9 * 2, "CFMC - Settings");
+            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Chat Speed", "Speed: " + speed, "Time interval: " + interval));
+            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Bot Detection", "Speed: " + speed, "Time interval: " + interval));
+            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Spam Detection", "Speed: " + speed, "Time interval: " + interval));
+            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Partial Detection", "Speed: " + speed, "Time interval: " + interval));
+            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "List Groups", ""));
+            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "List Words", ""));
+            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Staff Message Settings", "")); //on/off, current, edit
+            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "mode", ""));
+            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "history", ""));
+            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Strikes", "Set strikes for all: max or off"));
+            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Toggle Filter On or Off", ""));
+            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Create New Group", ""));
+            player.openInventory(inv);
+        } else if (plugin.getGroupList().contains(menu.toLowerCase())) {
+
+            inv = Bukkit.createInventory(player, 9 * 2, "CFMC - Filter Group: " + menu);
+            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Go Back", ""));
+            //TODO set item 4 to list all current settings?
+            // list words, remove, on/off, mode, commands (list, add, remove), staff (on/off, current, edit), replace (list, add, remove),
+            // strikes (max, off, commands(list, add, remove)), history, add word, remove word, partial
+        }
+
+    }
+
+    private void openPlayerGUI(CommandSender sender, UUID uuid, String menu) {
+        Player player = (Player) sender;
+        Inventory inv;
+        switch (menu) {
+            case "main":
+                inv = Bukkit.createInventory(player, 9 * 2, "CFMC - Moderation Tools");
+
+                inv.setItem(4, getItem(new ItemStack(Material.CARVED_PUMPKIN), Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName(), uuid + ""));
+                inv.setItem(12, getItem(new ItemStack(Material.BOOK), "Notes", "List, add, or remove notes for " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName()));
+                inv.setItem(13, getItem(new ItemStack(Material.RED_STAINED_GLASS_PANE), "Strikes", "List, set, or clear strikes for " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName()));
+                inv.setItem(14, getItem(new ItemStack(Material.CYAN_STAINED_GLASS_PANE), "Clear History", "Completely delete the history for " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName()));
+                inv.setItem(15, getItem(new ItemStack(Material.CLOCK), "Timeout", "Timeout " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName()));
+
+                player.openInventory(inv);
+                break;
+            case "notes":
+                inv = Bukkit.createInventory(player, 9 * 2, "CFMC - Notes");
+
+                inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Go Back", ""));
+                inv.setItem(4, getItem(new ItemStack(Material.CARVED_PUMPKIN), Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName(), uuid + ""));
+                inv.setItem(12, getItem(new ItemStack(Material.BOOK), "List Notes", "List notes for " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName()));
+                inv.setItem(13, getItem(new ItemStack(Material.PAPER), "Add Note", "Add a note for " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName()));
+                inv.setItem(14, getItem(new ItemStack(Material.RED_STAINED_GLASS_PANE), "Remove Note", "Remove a note for " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName()));
+
+                player.openInventory(inv);
+                break;
+            case "notesRemove":
+                inv = Bukkit.createInventory(player, 9 * 2, "CFMC - Notes - Remove");
+
+                inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Go Back", ""));
+                inv.setItem(4, getItem(new ItemStack(Material.CARVED_PUMPKIN), Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName(), uuid + ""));
+                inv.setItem(12, getItem(new ItemStack(Material.BOOK), "Remove All Notes", "Remove all notes for " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName()));
+                inv.setItem(13, getItem(new ItemStack(Material.RED_STAINED_GLASS_PANE), "Remove History", "Remove history for " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName()));
+                inv.setItem(14, getItem(new ItemStack(Material.PAPER), "Remove Note", "Remove a specific note for " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName()));
+
+                player.openInventory(inv);
+                break;
+            case "strikes":
+                inv = Bukkit.createInventory(player, 9 * 2, "CFMC - Strikes");
+
+                inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Go Back", ""));
+                inv.setItem(4, getItem(new ItemStack(Material.CARVED_PUMPKIN), Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName(), uuid + ""));
+                inv.setItem(12, getItem(new ItemStack(Material.BOOK), "List Strikes", "List strikes for " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName()));
+                inv.setItem(13, getItem(new ItemStack(Material.RED_STAINED_GLASS_PANE), "Clear Strikes", "Clear strikes for " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName()));
+                inv.setItem(14, getItem(new ItemStack(Material.PAPER), "Set Strikes", "Set the strikes for " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName()));
+
+                player.openInventory(inv);
+                break;
+            case "clear":
+                inv = Bukkit.createInventory(player, 9 * 2, "CFMC - Clear History");
+
+                inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Go Back", ""));
+                inv.setItem(4, getItem(new ItemStack(Material.CARVED_PUMPKIN), Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName(), uuid + ""));
+                inv.setItem(13, getItem(new ItemStack(Material.RED_STAINED_GLASS_PANE), "Remove From History", "Completely remove all history regarding " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName()));
+
+                player.openInventory(inv);
+                break;
+            case "timeout":
+                String rem;
+                if (!plugin.getTimeoutMap().containsKey(uuid)) {
+                    rem = "";
+                } else {
+                    Date date = new Date();
+                    long now = date.getTime();
+                    long dif = (plugin.getTimeoutMap().get(uuid) - now) / 1000;
+                    long min = dif / 60;
+                    long sec = dif % 60;
+                    rem = "Currently timed out for " + min + " minutes and " + sec + " seconds.";
+                }
+                inv = Bukkit.createInventory(player, 9 * 2, "CFMC - Timeout");
+
+                inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Go Back", ""));
+                inv.setItem(4, getItem(new ItemStack(Material.CARVED_PUMPKIN), Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName(), uuid + "", rem));
+                inv.setItem(9, getItem(new ItemStack(Material.CLOCK), "Un-Timeout", "Take them off timeout"));
+                inv.setItem(10, getItem(new ItemStack(Material.CLOCK), "30 seconds", ""));
+                inv.setItem(11, getItem(new ItemStack(Material.CLOCK), "1 minutes", ""));
+                inv.setItem(12, getItem(new ItemStack(Material.CLOCK), "5 minutes", ""));
+                inv.setItem(13, getItem(new ItemStack(Material.CLOCK), "10 minutes", ""));
+                inv.setItem(14, getItem(new ItemStack(Material.CLOCK), "30 minutes", ""));
+                inv.setItem(15, getItem(new ItemStack(Material.CLOCK), "1 hour", ""));
+                inv.setItem(16, getItem(new ItemStack(Material.CLOCK), "24 hours", ""));
+                inv.setItem(17, getItem(new ItemStack(Material.CLOCK), "Until server restart", ""));
+
+                player.openInventory(inv);
+                break;
+            default:
+                break;
+        }
+    }
+    private ItemStack getItem(ItemStack item, String name, String... lore) {
+        ItemMeta meta = item.getItemMeta();
+
+        Objects.requireNonNull(meta).setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
+
+        List<String> lores = new ArrayList<>();
+        for (String s : lore) {
+            lores.add(ChatColor.translateAlternateColorCodes('&', s));
+        }
+        meta.setLore(lores);
+        item.setItemMeta(meta);
+
+        return item;
+    }
+
     private String setCommand(String msg) {
         if (msg.contains("[date]")) {
             Date now = new Date();
@@ -935,6 +1239,10 @@ public class Filter implements Listener, CommandExecutor {
         Date now = new Date();
         Long cnt = ((Objects.equals(var, "m") || Objects.equals(var, "min")) ? time * 60 : time) * 1000;
         Long until = now.getTime() + cnt;
+        if (time == 0) {
+            plugin.getTimeoutMap().remove(uuid);
+            return;
+        }
         plugin.getTimeoutMap().put(uuid, until);
     }
 }

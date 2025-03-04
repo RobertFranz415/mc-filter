@@ -111,8 +111,9 @@ public class ChatFilter implements Listener {
                 long min = dif / 60;
                 long sec = dif % 60;
                 event.getPlayer().sendMessage(ChatColor.RED + "Still timed out for " + min + " minutes and " + sec + " seconds.");
+            } else {
+                event.getPlayer().sendMessage(ChatColor.RED + "Still timed out for " + dif + " seconds.");
             }
-            event.getPlayer().sendMessage(ChatColor.RED + "Still timed out for " + dif + " seconds.");
             event.setCancelled(true);
         } else {
             plugin.getTimeoutMap().remove(event.getPlayer().getUniqueId());

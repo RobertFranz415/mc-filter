@@ -179,8 +179,7 @@ public final class ChatFilterMC extends JavaPlugin {
         int[] months = {0, 31, 59, 89, 120, 151, 181, 212, 243, 273, 304, 334};
         ArrayList<String> keys = new ArrayList<>(this.historyConfig.getConfig().getKeys(false));
         for (String key : keys) {
-            if (!this.historyConfig.getConfig().contains(key+".latest")) {
-                Bukkit.getLogger().info("No latest for " + Objects.requireNonNull(Bukkit.getPlayer(key)).getName());
+            if (!this.historyConfig.getConfig().contains(key + ".latest")) {
                 continue;
             }
 
