@@ -41,6 +41,7 @@ public class Filter implements Listener, CommandExecutor {
 
     //TODO
     // new:
+    // Fix default messages so they dont show for other options
     // Clean up switch, make commands consistent
     // add strikes on (unless theres a reason why there is none)
     // add more confirmation messages
@@ -126,7 +127,7 @@ public class Filter implements Listener, CommandExecutor {
                             this.listPlayerNotes(sender, args[2].toLowerCase(), uuid);
                             break;
                         case "add":
-                            this.addPlayerNotes(args, sender, args[2].toLowerCase(), uuid);
+                            this.addPlayerNotes(sender, uuid, this.buildNote(args));
                             break;
                         case "remove":
                             if (args.length == 3) {
@@ -134,7 +135,7 @@ public class Filter implements Listener, CommandExecutor {
                                 return true;
                             }
                             // args[3] options: all, history, an integer
-                            this.removePlayerNote(sender, args[2].toLowerCase(), uuid, args[3].toLowerCase());
+                            this.removePlayerNote(sender, uuid, args[3].toLowerCase());
                             break;
                         case "strikes":
                             // ex: /filter notes strikes [name] clear|set
@@ -142,13 +143,13 @@ public class Filter implements Listener, CommandExecutor {
                                 switch (args[3].toLowerCase()) {
                                     case "clear":
                                         if (args.length == 4) {
-                                            this.clearPlayerStrikes(sender, args[2].toLowerCase(), uuid, "all");
+                                            this.clearPlayerStrikes(sender, uuid, "all");
                                         } else {
-                                            this.clearPlayerStrikes(sender, args[2].toLowerCase(), uuid, args[4].toLowerCase());
+                                            this.clearPlayerStrikes(sender, uuid, args[4].toLowerCase());
                                         }
                                         break;
                                     case "set":
-                                        this.setPlayerStrikes(args, sender, args[2].toLowerCase(), uuid);
+                                        this.setPlayerStrikes(sender, uuid, args[4].toLowerCase(), args[5]);
                                         break;
                                     default:
                                         sender.sendMessage(ChatColor.AQUA + "The commands for strikes are clear and set.  To show strikes count simply enter the username.");
@@ -163,7 +164,6 @@ public class Filter implements Listener, CommandExecutor {
                         case "wipe":
                             if (!this.historyConfig.getConfig().contains(uuid.toString())) {
                                 sender.sendMessage(ChatColor.AQUA + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + " does not have any history");
-                                Bukkit.getLogger().info("DOES NOT EXIST");
                                 break;
                             }
                             this.promptHistoryWipe(sender, uuid);
@@ -174,25 +174,59 @@ public class Filter implements Listener, CommandExecutor {
                     }
                     break;
                 case "spam":
-                    //TODO change to remove args
-                    this.toggleSpamDetection(args, sender);
+                    if (args.length != 2) {
+                        sender.sendMessage(ChatColor.AQUA + "The options are: on and off.");
+                        break;
+                    }
+                    this.toggleSpamDetection(sender, args[1].toLowerCase());
                     break;
                 case "bot":
-                    this.toggleBotDetection(args, sender);
+                    if (args.length != 2) {
+                        sender.sendMessage(ChatColor.AQUA + "The options are: on and off.");
+                        break;
+                    }
+                    this.toggleBotDetection(sender, args[1].toLowerCase());
                     break;
                 case "speed":
-                    this.toggleChatSpeed(args, sender);
+                    if (args.length != 2) {
+                        sender.sendMessage(ChatColor.AQUA + "The options are: normal, chill, slow, ice..");
+                        break;
+                    }
+                    this.toggleChatSpeed(sender, args[1].toLowerCase());
                     break;
                 case "create":
-                    this.createGroup(args, sender);
+                    if (args.length < 2) {
+                        sender.sendMessage(ChatColor.AQUA + "Must enter a name for the new filter group.");
+                        break;
+                    } else if (args.length > 2) {
+                        sender.sendMessage(ChatColor.AQUA + "Must only enter the name of the new filter group.");
+                        break;
+                    }
+                    Set<String> cmds = new HashSet<>(Arrays.asList("on", "off", "mode", "staff", "history", "strikes", "notes", "spam", "bot", "speed", "create", "remove", "groups", "timeout"));
+                    if (cmds.contains(args[1].toLowerCase())) {
+                        sender.sendMessage(ChatColor.AQUA + "Please choose a name that is not also a filter command.");
+                        break;
+                    }
+                    this.createGroup(sender, args[1].toLowerCase());
                     break;
                 case "remove":
                     //TODO Possibly change name to prevent confusion with other remove commands
                     //this.removeGroup(args, sender);
-                    this.promptRemove(args, sender);
+                    if (args.length < 2) {
+                        sender.sendMessage(ChatColor.AQUA + "Must enter the name of filter group you want to remove.");
+                        break;
+                    } else if (args.length > 2) {
+                        sender.sendMessage(ChatColor.AQUA + "Must only enter the name of the filter group you want to remove.");
+                        break;
+                    }
+                    this.promptRemove(sender, args[1].toLowerCase());
                     break;
                 case "groups":
-                    this.listGroups(args, sender);
+                    if (args.length != 1) {
+                        sender.sendMessage(ChatColor.AQUA + "Not a valid command.");
+                        break;
+                    }
+                    this.listGroups(sender);
                     break;
                 case "words":
                     this.listWords(sender, "all");
@@ -222,10 +256,13 @@ public class Filter implements Listener, CommandExecutor {
                             break;
                     }
                     break;
+                case "settings":
+                    this.openSettingsGUI(sender, "main");
+                    break;
                 default:
                     if (plugin.getGroupList().contains(args[0].toLowerCase())) break;
-                    sender.sendMessage(ChatColor.AQUA + "The options for the filter command are: on/off, mode, staff, history, strikes, notes, spam, bot, speed, create, remove, groups, words, timeout, partial, or the name of a filter group.");
-                    sender.sendMessage(ChatColor.AQUA + "Plugin created by Mithraea and DeathsValentine");
+//                    sender.sendMessage(ChatColor.AQUA + "The options for the filter command are: on/off, mode, staff, history, strikes, notes, spam, bot, speed, create, remove, groups, words, timeout, partial, or the name of a filter group.");
+//                    sender.sendMessage(ChatColor.AQUA + "Plugin created by Mithraea and DeathsValentine");
                     break;
             }
             // Group specific section
@@ -243,7 +280,7 @@ public class Filter implements Listener, CommandExecutor {
                         case "commands":
                             switch (args[2].toLowerCase()) {
                                 case "list":
-                                    this.listCommands(args, sender);
+                                    this.listCommands(sender, args[0].toLowerCase());
                                     break;
                                 case "add":
                                     this.addCommands(args, sender);
@@ -322,10 +359,18 @@ public class Filter implements Listener, CommandExecutor {
                             this.toggleHistory(sender, args[0].toLowerCase(), args[2].toLowerCase());
                             break;
                         case "add":
-                            this.addWord(args, sender);
+                            if (args.length != 3) {
+                                sender.sendMessage(ChatColor.AQUA + "Must enter just the word to add.");
+                                break;
+                            }
+                            this.addWord(sender, args[0].toLowerCase(), args[2].toLowerCase());
                             break;
                         case "remove":
-                            this.removeWord(args, sender);
+                            if (args.length != 3) {
+                                sender.sendMessage(ChatColor.AQUA + "Must enter just the word to remove.");
+                                break;
+                            }
+                            this.removeWord(sender, args[0].toLowerCase(), args[2].toLowerCase());
                             break;
                         case "words":
                             this.listWords(sender, args[0].toLowerCase());
@@ -339,7 +384,6 @@ public class Filter implements Listener, CommandExecutor {
 
                     }
                 } catch (Exception e) {
-                    sender.sendMessage(ChatColor.AQUA + "Must enter a full command");
                     return true;
                 }
             }
@@ -348,7 +392,6 @@ public class Filter implements Listener, CommandExecutor {
                 try {
                     uuid = Objects.requireNonNull(Bukkit.getPlayer(args[0])).getUniqueId();
                 } catch (Exception e) {
-                    sender.sendMessage(ChatColor.AQUA + "Not a valid command.");
                     return true;
                 }
                 this.openPlayerGUI(sender, uuid, "main");
@@ -371,23 +414,30 @@ public class Filter implements Listener, CommandExecutor {
             sender.sendMessage(num + ": " + notes.get(i));
         }
     }
-    private void addPlayerNotes(String[] args, CommandSender sender, String player, UUID uuid) {
-        this.historyConfig.getConfig().set(uuid + ".username", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName());
-        List<String> notesToAdd = new ArrayList<>(this.historyConfig.getConfig().getStringList(uuid + ".notes"));
+    private String buildNote(String[] args) {
         StringBuilder note = new StringBuilder();
-        String str = sender.getName().equals("CONSOLE") ? "> " : ": ";
-        note.append(sender.getName()).append(str);
         for (int i = 3; i < args.length; i++) {
             note.append(args[i]);
             if (i != args.length - 1) note.append(" ");
         }
-        notesToAdd.add(this.setCommand(note.toString()));
+        return note.toString();
+    }
+    public void addPlayerNotes(CommandSender sender, UUID uuid, String note) {
+        this.historyConfig.getConfig().set(uuid + ".username", Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName());
+        List<String> notesToAdd = new ArrayList<>(this.historyConfig.getConfig().getStringList(uuid + ".notes"));
+
+        StringBuilder sb = new StringBuilder();
+        String str = sender.getName().equals("CONSOLE") ? "> " : ": ";
+        sb.append(sender.getName()).append(str).append(note);
+
+        notesToAdd.add(this.setCommand(sb.toString()));
         this.historyConfig.getConfig().set(uuid + ".notes", notesToAdd);
         this.historyConfig.save();
-        sender.sendMessage(ChatColor.GREEN + "Note added for " + player + ".");
+        sender.sendMessage(ChatColor.GREEN + "Note added for " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName() + ".");
 
     }
-    private void removePlayerNote(CommandSender sender, String player, UUID uuid, String note) {
+    public void removePlayerNote(CommandSender sender, UUID uuid, String note) {
+        String player = Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName();
         if (Objects.equals(note, "all")) {
             this.historyConfig.getConfig().set(uuid + ".notes", new ArrayList<String>());
             this.historyConfig.save();
@@ -440,7 +490,8 @@ public class Filter implements Listener, CommandExecutor {
             sender.sendMessage("  " + tier + ": " + cnt);
         }
     }
-    private void clearPlayerStrikes(CommandSender sender, String player, UUID uuid, String group) {
+    public void clearPlayerStrikes(CommandSender sender, UUID uuid, String group) {
+        String player = Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName();
         if (Objects.equals(group, "all")) {
             for (String tier : this.plugin.getGroupList()) {
                 this.historyConfig.getConfig().set(uuid + "." + tier + ".count", 0);
@@ -456,12 +507,13 @@ public class Filter implements Listener, CommandExecutor {
         this.historyConfig.save();
         plugin.setHistoryConfig(this.historyConfig);
     }
-    private void setPlayerStrikes(String[] args, CommandSender sender, String player, UUID uuid) {
+    public void setPlayerStrikes(CommandSender sender, UUID uuid, String group, String num) {
         //TODO Implement conversation
-        if (plugin.getGroupList().contains(args[4].toLowerCase())) {
+        String player = Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName();
+        if (plugin.getGroupList().contains(group)) {
             try {
-                int strikes = Integer.parseInt(args[5]);
-                plugin.getHistoryConfig().getConfig().set(uuid + "." + args[4].toLowerCase() + ".count", strikes);
+                int strikes = Integer.parseInt(num);
+                plugin.getHistoryConfig().getConfig().set(uuid + "." + group + ".count", strikes);
                 plugin.getHistoryConfig().save();
                 sender.sendMessage(ChatColor.GREEN + "Strikes for " + player + " set to " + strikes + ".");
             } catch (Exception e) {
@@ -472,71 +524,47 @@ public class Filter implements Listener, CommandExecutor {
         }
     }
 
-    private void toggleSpamDetection(String[] args, CommandSender sender) {
-        if (args.length != 2) {
-            sender.sendMessage(ChatColor.AQUA + "The options are: on and off.");
-            return;
-        }
-        if (Objects.equals(args[1].toLowerCase(), "on") || Objects.equals(args[1].toLowerCase(), "off")) {
-            Boolean spamState = args[1].equals("on");
+    private void toggleSpamDetection(CommandSender sender, String toggle) {
+        if (Objects.equals(toggle, "on") || Objects.equals(toggle, "off")) {
+            Boolean spamState = toggle.equals("on");
             this.filterConfig.getConfig().set("spam.enabled", spamState);
             this.filterConfig.save();
             plugin.setFilterConfig(filterConfig);
-            sender.sendMessage(ChatColor.GREEN + "Spam detection turned " + args[1].toLowerCase() + ".");
+            sender.sendMessage(ChatColor.GREEN + "Spam detection turned " + toggle + ".");
         } else {
             sender.sendMessage(ChatColor.AQUA + "The options are: on and off.");
         }
     }
-    private void toggleBotDetection(String[] args, CommandSender sender) {
-        if (args.length != 2) {
-            sender.sendMessage(ChatColor.AQUA + "The options are: on and off.");
-            return;
-        }
-        if (Objects.equals(args[1].toLowerCase(), "on") || Objects.equals(args[1].toLowerCase(), "off")) {
-            Boolean botState = args[1].equals("on");
+    private void toggleBotDetection(CommandSender sender, String toggle) {
+        if (Objects.equals(toggle, "on") || Objects.equals(toggle, "off")) {
+            Boolean botState = toggle.equals("on");
             this.filterConfig.getConfig().set("bot.enabled", botState);
             this.filterConfig.save();
             plugin.setFilterConfig(filterConfig);
-            sender.sendMessage(ChatColor.GREEN + "Bot detection turned " + args[1].toLowerCase() + ".");
+            sender.sendMessage(ChatColor.GREEN + "Bot detection turned " + toggle + ".");
         } else {
             sender.sendMessage(ChatColor.AQUA + "The options are: on and off.");
         }
     }
-    private void toggleChatSpeed(String[] args, CommandSender sender) {
-        if (args.length != 2) {
-            sender.sendMessage(ChatColor.AQUA + "The options are: normal, chill, slow, ice..");
-            return;
-        }
-        if (Objects.equals(args[1].toLowerCase(), "normal") || Objects.equals(args[1].toLowerCase(), "chill") || Objects.equals(args[1].toLowerCase(), "slow") || Objects.equals(args[1].toLowerCase(), "ice")) {
-            this.filterConfig.getConfig().set("chatSpeed.mode", args[1].toLowerCase());
+    private void toggleChatSpeed(CommandSender sender, String setting) {
+        if (Objects.equals(setting, "normal") || Objects.equals(setting, "chill") || Objects.equals(setting, "slow") || Objects.equals(setting, "ice")) {
+            this.filterConfig.getConfig().set("chatSpeed.mode", setting);
             this.filterConfig.save();
             plugin.setFilterConfig(this.filterConfig);
-            sender.sendMessage(ChatColor.GREEN + "Chat speed set to " + args[1].toLowerCase());
+            sender.sendMessage(ChatColor.GREEN + "Chat speed set to " + setting);
         } else {
             sender.sendMessage(ChatColor.AQUA + "The options are: normal, chill, slow, ice..");
         }
     }
-    private void createGroup(String[] args, CommandSender sender) {
-        if (args.length < 2) {
-            sender.sendMessage(ChatColor.AQUA + "Must enter a name for the new filter group.");
-            return;
-        } else if (args.length > 2) {
-            sender.sendMessage(ChatColor.AQUA + "Must only enter the name of the new filter group.");
-            return;
-        }
-        Set<String> cmds = new HashSet<>(Arrays.asList("on", "off", "mode", "staff", "history", "strikes", "notes", "spam", "bot", "speed", "create", "remove", "groups", "timeout"));
-        if (cmds.contains(args[1].toLowerCase())) {
-            sender.sendMessage(ChatColor.AQUA + "Please choose a name that is not also a filter command.");
-            return;
-        }
+    public void createGroup(CommandSender sender, String name) {
 
-        String group = "groups." + args[1].toLowerCase() + ".";
+        String group = "groups." + name + ".";
         this.filterConfig.getConfig().set(group + "enabled", false);
         this.filterConfig.getConfig().set(group + "level", plugin.getGroupList().size() + 1);
         this.filterConfig.getConfig().set(group + "partialMatches", false);
         this.filterConfig.getConfig().set(group + "mode", "replace");
         this.filterConfig.getConfig().set(group + "replaceWith", new ArrayList<>());
-        this.filterConfig.getConfig().set(group + "msgToStaff", "[senderName] triggered " + args[1].toLowerCase() + " filter.");
+        this.filterConfig.getConfig().set(group + "msgToStaff", "[senderName] triggered " + name + " filter.");
         this.filterConfig.getConfig().set(group + "msgToStaffEnabled", false);
         this.filterConfig.getConfig().set(group + "commands", new ArrayList<>());
         this.filterConfig.getConfig().set(group + "history", false);
@@ -547,51 +575,41 @@ public class Filter implements Listener, CommandExecutor {
         this.filterConfig.save();
         plugin.setFilterConfig(this.filterConfig);
 
-        this.wordListConfig.getConfig().set(args[1].toLowerCase(), new ArrayList<>());
+        this.wordListConfig.getConfig().set(name, new ArrayList<>());
         this.wordListConfig.save();
         plugin.setWordList(this.wordListConfig);
 
         plugin.initGroupList();
         plugin.reloadGroupList();
-        sender.sendMessage(ChatColor.GREEN + "New filter group " + args[1].toLowerCase() + " created!  Now to edit the options.");
+        sender.sendMessage(ChatColor.GREEN + "New filter group " + name + " created!  Now to edit the options.");
 
     }
-    public void removeGroup(String[] args, CommandSender sender) {
-        if (this.filterConfig.getConfig().contains("groups." + args[1].toLowerCase())) {
-            this.filterConfig.getConfig().set("groups." + args[1].toLowerCase(), null);
+    public void removeGroup(CommandSender sender, String group) {
+        if (this.filterConfig.getConfig().contains("groups." + group)) {
+            this.filterConfig.getConfig().set("groups." + group, null);
             this.filterConfig.save();
             plugin.setFilterConfig(this.filterConfig);
 
             plugin.initGroupList();
-            sender.sendMessage(ChatColor.GREEN + "Filter group " + args[1].toLowerCase() + " removed.");
+            sender.sendMessage(ChatColor.GREEN + "Filter group " + group + " removed.");
         }
-        if (this.wordListConfig.getConfig().contains(args[1].toLowerCase())) {
-            this.wordListConfig.getConfig().set(args[1].toLowerCase(), null);
+        if (this.wordListConfig.getConfig().contains(group)) {
+            this.wordListConfig.getConfig().set(group, null);
             this.wordListConfig.save();
             plugin.setWordList(this.wordListConfig);
         }
     }
 
-    private void promptRemove(String[] args, CommandSender sender) {
-        if (args.length < 2) {
-            sender.sendMessage(ChatColor.AQUA + "Must enter the name of filter group you want to remove.");
-            return ;
-        } else if (args.length > 2) {
-            sender.sendMessage(ChatColor.AQUA + "Must only enter the name of the filter group you want to remove.");
-            return ;
-        } else if (!this.filterConfig.getConfig().contains("groups." + args[1].toLowerCase())) {
+    private void promptRemove(CommandSender sender, String group) {
+         if (!this.filterConfig.getConfig().contains("groups." + group)) {
             sender.sendMessage(ChatColor.AQUA + "Not a valid filter group!");
             return;
         }
         ConversationFactory cf = new ConversationFactory(this.plugin);
-        Conversation conv = cf.withFirstPrompt(new ConfirmPrompt(this, sender, args, args[1].toLowerCase())).withLocalEcho(true).buildConversation((Player) sender);
+        Conversation conv = cf.withFirstPrompt(new ConfirmPrompt(this, sender, group)).withLocalEcho(true).buildConversation((Player) sender);
         conv.begin();
     }
-    private void listGroups(String[] args, CommandSender sender) {
-        if (args.length != 1) {
-            sender.sendMessage(ChatColor.AQUA + "Not a valid command.");
-            return;
-        }
+    private void listGroups(CommandSender sender) {
         sender.sendMessage(ChatColor.AQUA + "Enabled filter groups ordered by level: ");
         for (String g : plugin.getGroupList()) {
             sender.sendMessage(" -" + g);
@@ -650,9 +668,9 @@ public class Filter implements Listener, CommandExecutor {
         }
 
     }
-    private void listCommands(String[] args, CommandSender sender) {
-        List<String> commandList = new ArrayList<>(this.filterConfig.getConfig().getStringList("groups." + args[0].toLowerCase() + ".commands"));
-        sender.sendMessage(ChatColor.AQUA + "Filter commands for " + args[0].toLowerCase() + ":");
+    private void listCommands(CommandSender sender, String group) {
+        List<String> commandList = new ArrayList<>(this.filterConfig.getConfig().getStringList("groups." + group + ".commands"));
+        sender.sendMessage(ChatColor.AQUA + "Filter commands for " + group + ":");
         for (int i = 0; i < commandList.size(); i++) {
             int num = i + 1;
             sender.sendMessage(num + ": " + commandList.get(i));
@@ -862,38 +880,29 @@ public class Filter implements Listener, CommandExecutor {
         }
     }
 
-    private void addWord(String[] args, CommandSender sender) {
-        if (args.length != 3) {
-            sender.sendMessage(ChatColor.AQUA + "Must enter just the word to add.");
-            return;
-        }
-
-        List<String> wordList = this.wordListConfig.getConfig().getStringList(args[0].toLowerCase());
-        wordList.add(args[2].toLowerCase());
-        this.wordListConfig.getConfig().set(args[0].toLowerCase(), wordList);
+    private void addWord(CommandSender sender, String group, String word) {
+        List<String> wordList = this.wordListConfig.getConfig().getStringList(group);
+        wordList.add(word);
+        this.wordListConfig.getConfig().set(group, wordList);
         this.wordListConfig.save();
         plugin.setWordList(this.wordListConfig);
-        plugin.getRegexBuilder().buildRegex(args[0].toLowerCase());
-        sender.sendMessage(ChatColor.GREEN + "Added " + args[2].toLowerCase() + " to " + args[0].toLowerCase() + " filter list.");
+        plugin.getRegexBuilder().buildRegex(group);
+        sender.sendMessage(ChatColor.GREEN + "Added " + word + " to the " + group + " filter list.");
     }
 
-    private void removeWord(String[] args, CommandSender sender) {
-        if (args.length != 3) {
-            sender.sendMessage(ChatColor.AQUA + "Must enter just the word to remove.");
-            return;
-        }
-        List<String> wList = this.wordListConfig.getConfig().getStringList(args[0].toLowerCase());
-        if (!wList.contains(args[2].toLowerCase())) {
-            sender.sendMessage(ChatColor.AQUA + "Entered word not in " + args[0].toLowerCase() + " filter list.");
+    private void removeWord(CommandSender sender, String group, String word) {
+        List<String> wList = this.wordListConfig.getConfig().getStringList(group);
+        if (!wList.contains(word)) {
+            sender.sendMessage(ChatColor.AQUA + word + " is not in the " + group + " filter list.");
             return;
         }
 
-        wList.remove(args[2].toLowerCase());
-        this.wordListConfig.getConfig().set(args[0].toLowerCase(), wList);
+        wList.remove(word);
+        this.wordListConfig.getConfig().set(group, wList);
         this.wordListConfig.save();
         plugin.setWordList(this.wordListConfig);
-        plugin.getRegexBuilder().buildRegex(args[0].toLowerCase());
-        sender.sendMessage(ChatColor.GREEN + "Removed " + args[2].toLowerCase() + " from " + args[0].toLowerCase() + " filter list.");
+        plugin.getRegexBuilder().buildRegex(group);
+        sender.sendMessage(ChatColor.GREEN + "Removed " + word + " from the " + group + " filter list.");
     }
 
     private void listWords(CommandSender sender, String group) {
@@ -952,13 +961,13 @@ public class Filter implements Listener, CommandExecutor {
     @EventHandler
     private void onInventoryClickEvent(InventoryClickEvent event) {
         String menu = event.getView().getTitle();
-        if (!menu.contains("CFMC")) return;
+        if (!menu.contains("CFMC Moderation Tools")) return;
         event.setCancelled(true);
         UUID uuid = UUID.fromString(event.getView().getItem(4).getItemMeta().getLore().get(0));
         int slot = event.getSlot();
 
         switch (menu) {
-            case "CFMC - Moderation Tools":
+            case "CFMC Moderation Tools - Main":
                 switch (slot) {
                     case 12:
                         this.openPlayerGUI(event.getWhoClicked(), uuid, "notes");
@@ -976,7 +985,7 @@ public class Filter implements Listener, CommandExecutor {
                         break;
                 }
                 break;
-            case "CFMC - Notes":
+            case "CFMC Moderation Tools - Notes":
                 switch (slot) {
                     case 0:
                         this.openPlayerGUI(event.getWhoClicked(), uuid, "main");
@@ -985,8 +994,10 @@ public class Filter implements Listener, CommandExecutor {
                         this.listPlayerNotes(event.getWhoClicked(), Bukkit.getPlayer(uuid).getName(), uuid);
                         break;
                     case 13:
-                        //TODO fix this
-                        this.addPlayerNotes(new String[5], event.getWhoClicked(), Bukkit.getPlayer(uuid).getName(), uuid);
+                        event.getWhoClicked().closeInventory();
+                        ConversationFactory cf = new ConversationFactory(this.plugin);
+                        Conversation conv = cf.withFirstPrompt(new ConvPrompt(this, event.getWhoClicked(), uuid, "addNote")).withLocalEcho(true).buildConversation((Player) event.getWhoClicked());
+                        conv.begin();
                         break;
                     case 14:
                         this.openPlayerGUI(event.getWhoClicked(), uuid, "notesRemove");
@@ -995,28 +1006,28 @@ public class Filter implements Listener, CommandExecutor {
                         break;
                 }
                 break;
-            case "CFMC - Notes - Remove":
+            case "CFMC Moderation Tools - Notes - Remove":
                 switch (slot) {
                     case 0:
                         this.openPlayerGUI(event.getWhoClicked(), uuid, "notes");
                         break;
                     case 12:
-                        //all
-                        this.removePlayerNote(event.getWhoClicked(), Bukkit.getPlayer(uuid).getName(), uuid, "all");
+                        this.removePlayerNote(event.getWhoClicked(), uuid, "all");
                         break;
                     case 13:
-                        //history
-                        this.removePlayerNote(event.getWhoClicked(), Bukkit.getPlayer(uuid).getName(), uuid, "history");
+                        this.removePlayerNote(event.getWhoClicked(), uuid, "history");
                         break;
                     case 14:
-                        //#
-                        //TODO do this
+                        event.getWhoClicked().closeInventory();
+                        ConversationFactory cf = new ConversationFactory(this.plugin);
+                        Conversation conv = cf.withFirstPrompt(new ConvPrompt(this, event.getWhoClicked(), uuid, "removeNote")).withLocalEcho(true).buildConversation((Player) event.getWhoClicked());
+                        conv.begin();
                         break;
                     default:
                         break;
                 }
                 break;
-            case "CFMC - Strikes":
+            case "CFMC Moderation Tools - Strikes":
                 switch (slot) {
                     case 0:
                         this.openPlayerGUI(event.getWhoClicked(), uuid, "main");
@@ -1025,30 +1036,35 @@ public class Filter implements Listener, CommandExecutor {
                         this.listPlayerStrikes(event.getWhoClicked(), uuid);
                         break;
                     case 13:
-                        //TODO add menu/conversation for specific group
-                        this.clearPlayerStrikes(event.getWhoClicked(), Bukkit.getPlayer(uuid).getName(), uuid, "all");
+                        event.getWhoClicked().closeInventory();
+                        ConversationFactory cf = new ConversationFactory(this.plugin);
+                        Conversation conv = cf.withFirstPrompt(new ConvPrompt(this, event.getWhoClicked(), uuid, "clearStrikes")).withLocalEcho(true).buildConversation((Player) event.getWhoClicked());
+                        conv.begin();
                         break;
                     case 14:
-                        //TODO fix args/command init
-                        this.setPlayerStrikes(new String[5], event.getWhoClicked(), Bukkit.getPlayer(uuid).getName(), uuid);
+                        event.getWhoClicked().closeInventory();
+                        ConversationFactory cf2 = new ConversationFactory(this.plugin);
+                        Conversation conv2 = cf2.withFirstPrompt(new ConvPrompt(this, event.getWhoClicked(), uuid, "setStrikes")).withLocalEcho(true).buildConversation((Player) event.getWhoClicked());
+                        conv2.begin();
                         break;
                     default:
                         break;
                 }
                 break;
-            case "CFMC - Clear History":
+            case "CFMC Moderation Tools - Clear History":
                 switch (slot) {
                     case 0:
                         this.openPlayerGUI(event.getWhoClicked(), uuid, "main");
                         break;
                     case 13:
                         // delete
+                        this.wipeHistory(event.getWhoClicked(), uuid);
                         break;
                     default:
                         break;
                 }
                 break;
-            case "CFMC - Timeout":
+            case "CFMC Moderation Tools - Timeout":
                 switch (slot) {
                     case 0:
                         this.openPlayerGUI(event.getWhoClicked(), uuid, "main");
@@ -1082,43 +1098,11 @@ public class Filter implements Listener, CommandExecutor {
                         break;
 
                 }
+                this.openPlayerGUI(event.getWhoClicked(), uuid, "timeout");
                 break;
             default:
                 break;
         }
-        //event.getWhoClicked().closeInventory();
-    }
-    //TODO Add spam detection, bot detection, chat speed menu
-    private void openSettingsGUI(CommandSender sender, UUID uuid, String menu) {
-        Player player = (Player) sender;
-        Inventory inv;
-        if (Objects.equals(menu, "main")) {
-            String speed = this.filterConfig.getConfig().getString("chatSpeed.mode");
-            String interval = this.filterConfig.getConfig().getString("chatSpeed." + speed);
-
-            inv = Bukkit.createInventory(player, 9 * 2, "CFMC - Settings");
-            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Chat Speed", "Speed: " + speed, "Time interval: " + interval));
-            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Bot Detection", "Speed: " + speed, "Time interval: " + interval));
-            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Spam Detection", "Speed: " + speed, "Time interval: " + interval));
-            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Partial Detection", "Speed: " + speed, "Time interval: " + interval));
-            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "List Groups", ""));
-            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "List Words", ""));
-            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Staff Message Settings", "")); //on/off, current, edit
-            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "mode", ""));
-            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "history", ""));
-            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Strikes", "Set strikes for all: max or off"));
-            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Toggle Filter On or Off", ""));
-            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Create New Group", ""));
-            player.openInventory(inv);
-        } else if (plugin.getGroupList().contains(menu.toLowerCase())) {
-
-            inv = Bukkit.createInventory(player, 9 * 2, "CFMC - Filter Group: " + menu);
-            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Go Back", ""));
-            //TODO set item 4 to list all current settings?
-            // list words, remove, on/off, mode, commands (list, add, remove), staff (on/off, current, edit), replace (list, add, remove),
-            // strikes (max, off, commands(list, add, remove)), history, add word, remove word, partial
-        }
-
     }
 
     private void openPlayerGUI(CommandSender sender, UUID uuid, String menu) {
@@ -1126,7 +1110,7 @@ public class Filter implements Listener, CommandExecutor {
         Inventory inv;
         switch (menu) {
             case "main":
-                inv = Bukkit.createInventory(player, 9 * 2, "CFMC - Moderation Tools");
+                inv = Bukkit.createInventory(player, 9 * 2, "CFMC Moderation Tools - Main");
 
                 inv.setItem(4, getItem(new ItemStack(Material.CARVED_PUMPKIN), Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName(), uuid + ""));
                 inv.setItem(12, getItem(new ItemStack(Material.BOOK), "Notes", "List, add, or remove notes for " + Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName()));
@@ -1137,7 +1121,7 @@ public class Filter implements Listener, CommandExecutor {
                 player.openInventory(inv);
                 break;
             case "notes":
-                inv = Bukkit.createInventory(player, 9 * 2, "CFMC - Notes");
+                inv = Bukkit.createInventory(player, 9 * 2, "CFMC Moderation Tools - Notes");
 
                 inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Go Back", ""));
                 inv.setItem(4, getItem(new ItemStack(Material.CARVED_PUMPKIN), Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName(), uuid + ""));
@@ -1148,7 +1132,7 @@ public class Filter implements Listener, CommandExecutor {
                 player.openInventory(inv);
                 break;
             case "notesRemove":
-                inv = Bukkit.createInventory(player, 9 * 2, "CFMC - Notes - Remove");
+                inv = Bukkit.createInventory(player, 9 * 2, "CFMC Moderation Tools - Notes - Remove");
 
                 inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Go Back", ""));
                 inv.setItem(4, getItem(new ItemStack(Material.CARVED_PUMPKIN), Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName(), uuid + ""));
@@ -1159,7 +1143,7 @@ public class Filter implements Listener, CommandExecutor {
                 player.openInventory(inv);
                 break;
             case "strikes":
-                inv = Bukkit.createInventory(player, 9 * 2, "CFMC - Strikes");
+                inv = Bukkit.createInventory(player, 9 * 2, "CFMC Moderation Tools - Strikes");
 
                 inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Go Back", ""));
                 inv.setItem(4, getItem(new ItemStack(Material.CARVED_PUMPKIN), Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName(), uuid + ""));
@@ -1170,7 +1154,7 @@ public class Filter implements Listener, CommandExecutor {
                 player.openInventory(inv);
                 break;
             case "clear":
-                inv = Bukkit.createInventory(player, 9 * 2, "CFMC - Clear History");
+                inv = Bukkit.createInventory(player, 9 * 2, "CFMC Moderation Tools - Clear History");
 
                 inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Go Back", ""));
                 inv.setItem(4, getItem(new ItemStack(Material.CARVED_PUMPKIN), Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName(), uuid + ""));
@@ -1190,7 +1174,7 @@ public class Filter implements Listener, CommandExecutor {
                     long sec = dif % 60;
                     rem = "Currently timed out for " + min + " minutes and " + sec + " seconds.";
                 }
-                inv = Bukkit.createInventory(player, 9 * 2, "CFMC - Timeout");
+                inv = Bukkit.createInventory(player, 9 * 2, "CFMC Moderation Tools - Timeout");
 
                 inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Go Back", ""));
                 inv.setItem(4, getItem(new ItemStack(Material.CARVED_PUMPKIN), Objects.requireNonNull(Bukkit.getPlayer(uuid)).getName(), uuid + "", rem));
@@ -1209,6 +1193,152 @@ public class Filter implements Listener, CommandExecutor {
             default:
                 break;
         }
+    }
+
+    @EventHandler
+    private void onSettingsClickEvent(InventoryClickEvent event) {
+        String menu = event.getView().getTitle();
+        if (!menu.contains("CFMC Settings")) return;
+        event.setCancelled(true);
+        int slot = event.getSlot();
+
+        switch (menu) {
+            case "CFMC Settings - Main":
+                switch (slot) {
+                    case 1:
+                        boolean on = false;
+                        for (String group : plugin.getGroupList()) {
+                            if (this.filterConfig.getConfig().getBoolean("groups." + group + ".enabled")) {
+                                on = true;
+                                break;
+                            }
+                        }
+                        String togFilter = on ? "off" : "on";
+                        this.toggleFilter(event.getWhoClicked(), "all", togFilter);
+                        this.openSettingsGUI(event.getWhoClicked(), "main");
+                        break;
+                    case 2:
+                        String setting = this.filterConfig.getConfig().getString("chatSpeed.mode");
+                        String set = (Objects.equals(setting, "normal")) ? "chill" : (Objects.equals(setting, "chill")) ? "slow" : (Objects.equals(setting, "slow")) ? "ice" : "normal";
+                        this.toggleChatSpeed(event.getWhoClicked(), set);
+                        this.openSettingsGUI(event.getWhoClicked(), "main");
+                        break;
+                    case 3:
+                        String toggleBot = this.filterConfig.getConfig().getBoolean("bot.enabled") ? "off" : "on";
+                        this.toggleBotDetection(event.getWhoClicked(), toggleBot);
+                        this.openSettingsGUI(event.getWhoClicked(), "main");
+                        break;
+                    case 4:
+                        String toggleSpam = this.filterConfig.getConfig().getBoolean("spam.enabled") ? "off" : "on";
+                        this.toggleSpamDetection(event.getWhoClicked(), toggleSpam);
+                        this.openSettingsGUI(event.getWhoClicked(), "main");
+                        break;
+                    case 5:
+                        //TODO Partials?
+                        break;
+                    case 6:
+                        this.listGroups(event.getWhoClicked());
+                        break;
+                    case 7:
+                        this.listWords(event.getWhoClicked(), "all");
+                        break;
+                    case 9:
+                        this.openSettingsGUI(event.getWhoClicked(), "groups");
+                        break;
+                    case 15:
+                        event.getWhoClicked().closeInventory();
+                        ConversationFactory cf = new ConversationFactory(this.plugin);
+                        Conversation conv = cf.withFirstPrompt(new ConvPrompt(this, event.getWhoClicked(), "createGroup")).withLocalEcho(true).buildConversation((Player) event.getWhoClicked());
+                        conv.begin();
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case "CFMC Settings - Groups":
+                if (slot > plugin.getGroupList().size()) break;
+                if (slot == 0) {
+                    this.openSettingsGUI(event.getWhoClicked(), "main");
+                    break;
+                }
+
+                String group = event.getView().getItem(slot).getItemMeta().getDisplayName();
+                this.openSettingsGUI(event.getWhoClicked(), group);
+                break;
+            default:
+                break;
+        }
+        if (menu.contains("CFMC Settings - Filter: ")) {
+            String[] split = menu.split(" ");
+            String group = split[split.length-1];
+            switch (slot) {
+                case 0:
+                    this.openSettingsGUI(event.getWhoClicked(), "groups");
+                    break;
+                case 2:
+                    this.listWords(event.getWhoClicked(), group);
+                    break;
+                case 8:
+                    event.getWhoClicked().closeInventory();
+                    this.promptRemove(event.getWhoClicked(), group);
+                    break;
+            }
+        }
+    }
+    //TODO Add spam detection, bot detection, chat speed menu
+    private void openSettingsGUI(CommandSender sender, String menu) {
+        Player player = (Player) sender;
+        Inventory inv;
+        if (Objects.equals(menu, "main")) {
+            String speed = this.filterConfig.getConfig().getString("chatSpeed.mode");
+            String interval = Objects.equals(speed, "normal") ? "0" : this.filterConfig.getConfig().getString("chatSpeed." + speed + ".time");
+            String bot = this.filterConfig.getConfig().getBoolean("bot.enabled") ? "on" : "off";
+            String spam = this.filterConfig.getConfig().getBoolean("spam.enabled") ? "on" : "off";
+            boolean on = false;
+            for (String group : plugin.getGroupList()) {
+                if (this.filterConfig.getConfig().getBoolean( "groups." + group + ".enabled")) {
+                    on = true;
+                    break;
+                }
+            }
+            String toggleFilter = on ? "on" : "off";
+
+            inv = Bukkit.createInventory(player, 9 * 2, "CFMC Settings - Main");
+            inv.setItem(1, getItem(new ItemStack(Material.BLUE_STAINED_GLASS_PANE), "Toggle Filter On or Off", "Currently: " + toggleFilter));
+            inv.setItem(2, getItem(new ItemStack(Material.RED_STAINED_GLASS_PANE), "Chat Speed", "Speed: " + speed, "Time interval: " + interval));
+            inv.setItem(3, getItem(new ItemStack(Material.BLUE_STAINED_GLASS_PANE), "Bot Detection", "Bot Detection: " + bot));
+            inv.setItem(4, getItem(new ItemStack(Material.RED_STAINED_GLASS_PANE), "Spam Detection", "Spam Detection: " + spam));
+            inv.setItem(5, getItem(new ItemStack(Material.BLUE_STAINED_GLASS_PANE), "Partial Detection", "Toggle Partial Detection for all groups."));
+            inv.setItem(6, getItem(new ItemStack(Material.RED_STAINED_GLASS_PANE), "List Groups", ""));
+            inv.setItem(7, getItem(new ItemStack(Material.BLUE_STAINED_GLASS_PANE), "List Words", ""));
+            inv.setItem(9, getItem(new ItemStack(Material.BOOKSHELF), "Edit Groups", "Edit filter group specific settings"));
+            inv.setItem(10, getItem(new ItemStack(Material.RED_STAINED_GLASS_PANE), "Staff Message Settings", "")); //on/off, current, edit
+            inv.setItem(11, getItem(new ItemStack(Material.BLUE_STAINED_GLASS_PANE), "mode", ""));
+            inv.setItem(12, getItem(new ItemStack(Material.RED_STAINED_GLASS_PANE), "history", ""));
+            inv.setItem(13, getItem(new ItemStack(Material.BLUE_STAINED_GLASS_PANE), "Strikes", "Set strikes for all: max or off"));
+            inv.setItem(15, getItem(new ItemStack(Material.RED_STAINED_GLASS_PANE), "Create New Group", ""));
+            player.openInventory(inv);
+        } else if (Objects.equals(menu, "groups")) {
+            int s = plugin.getGroupList().size() / 9 + 2;
+            inv = Bukkit.createInventory(player, 9 * s, "CFMC Settings - Groups");
+            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Go Back", ""));
+            for (int i = 0; i < plugin.getGroupList().size(); i++) {
+                inv.setItem(i+1, getItem(new ItemStack(Material.BOOK), plugin.getGroupList().get(i), ""));
+            }
+            player.openInventory(inv);
+        } else if (plugin.getGroupList().contains(menu.toLowerCase())) {
+
+            inv = Bukkit.createInventory(player, 9 * 2, "CFMC Settings - Filter: " + menu);
+            inv.setItem(0, getItem(new ItemStack(Material.ARROW), "Go Back", ""));
+            inv.setItem(2, getItem(new ItemStack(Material.BOOK), "List words", ""));
+            inv.setItem(8, getItem(new ItemStack(Material.SKELETON_SKULL), "Delete Group", "Permanently delete this group."));
+
+            player.openInventory(inv);
+            //TODO set item 4 to list all current settings?
+            // list words, remove, on/off, mode, commands (list, add, remove), staff (on/off, current, edit), replace (list, add, remove),
+            // strikes (max, off, commands(list, add, remove)), history, add word, remove word, partial
+        }
+
     }
     private ItemStack getItem(ItemStack item, String name, String... lore) {
         ItemMeta meta = item.getItemMeta();

@@ -12,12 +12,10 @@ import org.bukkit.conversations.ValidatingPrompt;
 public class ConfirmPrompt extends ValidatingPrompt {
     private final Filter filter;
     private final String group;
-    private final String[] args;
     private final CommandSender sender;
-    public ConfirmPrompt(Filter filter, CommandSender sender, String[] args, String group) {
+    public ConfirmPrompt(Filter filter, CommandSender sender, String group) {
         this.filter = filter;
         this.group = group;
-        this.args = args;
         this.sender = sender;
     }
 
@@ -29,8 +27,8 @@ public class ConfirmPrompt extends ValidatingPrompt {
     @Override
     protected Prompt acceptValidatedInput(ConversationContext conversationContext, String s) {
         if (s.equalsIgnoreCase("y") || s.equalsIgnoreCase("yes")) {
-            filter.removeGroup(args, sender);
-            sender.sendMessage(ChatColor.GREEN + "Filter group " + args[1].toLowerCase() + " removed.");
+            filter.removeGroup(sender, group);
+            sender.sendMessage(ChatColor.GREEN + "Filter group " + group + " removed.");
         } else {
             sender.sendMessage(ChatColor.GREEN + "Did not remove " + this.group + "!");
         }

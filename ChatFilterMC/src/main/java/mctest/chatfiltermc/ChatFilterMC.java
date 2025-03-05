@@ -57,7 +57,6 @@ public final class ChatFilterMC extends JavaPlugin {
         }
 
         if (filterConfig.getConfig().getBoolean("autoDelete.enabled")) {
-            Bukkit.getLogger().info("AUTO DELETE ENABLED");
             this.checkExpiredHistory();
         }
     }
