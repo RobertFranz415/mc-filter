@@ -1069,36 +1069,46 @@ public class Filter implements Listener, CommandExecutor {
                     case 0:
                         this.openPlayerGUI(event.getWhoClicked(), uuid, "main");
                         break;
+                    case 4:
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "timeout");
+                        break;
                     case 9:
                         this.callTimeout(event.getWhoClicked(), uuid, "0", "s");
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "timeout");
                         break;
                     case 10:
                         this.callTimeout(event.getWhoClicked(), uuid, "30", "s");
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "timeout");
                         break;
                     case 11:
                         this.callTimeout(event.getWhoClicked(), uuid, "1", "m");
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "timeout");
                         break;
                     case 12:
                         this.callTimeout(event.getWhoClicked(), uuid, "5", "m");
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "timeout");
                         break;
                     case 13:
                         this.callTimeout(event.getWhoClicked(), uuid, "10", "m");
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "timeout");
                         break;
                     case 14:
                         this.callTimeout(event.getWhoClicked(), uuid, "30", "m");
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "timeout");
                         break;
                     case 15:
                         this.callTimeout(event.getWhoClicked(), uuid, "60", "m");
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "timeout");
                         break;
                     case 16:
                         this.callTimeout(event.getWhoClicked(), uuid, "1440", "m");
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "timeout");
                         break;
                     case 17:
                         this.callTimeout(event.getWhoClicked(), uuid, "1000000", "m");
+                        this.openPlayerGUI(event.getWhoClicked(), uuid, "timeout");
                         break;
-
                 }
-                this.openPlayerGUI(event.getWhoClicked(), uuid, "timeout");
                 break;
             default:
                 break;
@@ -1172,7 +1182,8 @@ public class Filter implements Listener, CommandExecutor {
                     long dif = (plugin.getTimeoutMap().get(uuid) - now) / 1000;
                     long min = dif / 60;
                     long sec = dif % 60;
-                    rem = "Currently timed out for " + min + " minutes and " + sec + " seconds.";
+                    String clock = min + ":" + (sec < 10 ? "0" : "") + sec;
+                    rem = ChatColor.RED + "Timeout remaining: " + ChatColor.WHITE + clock;
                 }
                 inv = Bukkit.createInventory(player, 9 * 2, "CFMC Moderation Tools - Timeout");
 
